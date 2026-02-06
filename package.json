@@ -10,12 +10,14 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "axios": "^1.13.4",
-    "framer-motion": "^12.29.2",
-    "lucide-react": "^0.563.0",
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0",
-    "react-router-dom": "^7.13.0"
+    "axios": "^1.7.7",
+    "crypto-js": "^4.2.0",
+    "framer-motion": "^11.11.11",
+    "lucide-react": "^0.460.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.28.0",
+    "recharts": "^2.13.3"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
