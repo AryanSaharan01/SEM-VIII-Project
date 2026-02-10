@@ -62,6 +62,39 @@
   .gradient-text {
     @apply bg-gradient-to-r from-primary-500 to-primary-700 bg-clip-text text-transparent;
   }
+
+  /* Glass Card Effect - For Modals and Popup Cards */
+  .glass-card {
+    @apply bg-white/95 backdrop-blur-xl shadow-2xl border border-white/20;
+  }
+
+  /* Enhanced Card Shadows for Dashboard Components */
+  .card-shadow {
+    @apply shadow-lg hover:shadow-xl transition-shadow duration-300;
+  }
+
+  .card-shadow-sm {
+    @apply shadow-md hover:shadow-lg transition-shadow duration-300;
+  }
+
+  .card-shadow-strong {
+    @apply shadow-xl hover:shadow-2xl transition-shadow duration-300;
+  }
+
+  /* Modal/Popup specific backgrounds */
+  .modal-card {
+    @apply bg-white shadow-2xl border border-gray-100;
+  }
+
+  /* Dashboard card with depth */
+  .dashboard-card {
+    @apply bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100;
+  }
+
+  /* Stats card with gradient shadow */
+  .stats-card {
+    @apply bg-white rounded-xl shadow-md hover:shadow-lg transition-all duration-300 border border-gray-100;
+  }
 }
 
 /* Smooth scroll */
