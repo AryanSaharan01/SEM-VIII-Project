@@ -13,8 +13,8 @@ const SkillCard = ({ skill, isSelected, onClick }) => {
       onClick={onClick}
       className={`w-full text-left p-4 rounded-lg transition-all ${
         isSelected 
-          ? 'bg-primary-50 border-2 border-primary-600' 
-          : 'bg-white border-2 border-gray-200 hover:border-primary-300'
+          ? 'bg-primary-50 border-2 border-primary-600 shadow-lg' 
+          : 'bg-white border-2 border-gray-200 hover:border-primary-300 shadow-md hover:shadow-lg'
       }`}
     >
       <div className="flex items-start justify-between mb-2">

@@ -71,7 +71,7 @@ const CapsuleExport = ({ skill, sessions }) => {
   return (
     <div className="space-y-6">
       {/* Capsule Preview */}
-      <div className="glass-card rounded-xl p-8 bg-gradient-to-br from-primary-50 to-purple-50">
+      <div className="bg-gradient-to-br from-primary-50 to-purple-50 rounded-xl p-8 shadow-xl hover:shadow-2xl transition-shadow duration-300 border border-primary-100">
         <div className="flex items-start justify-between mb-6">
           <div>
             <h2 className="text-3xl font-bold text-gray-900 mb-2">{skill.name}</h2>
@@ -108,7 +108,7 @@ const CapsuleExport = ({ skill, sessions }) => {
       </div>
 
       {/* Share Options */}
-      <div className="glass-card rounded-xl p-6">
+      <div className="bg-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-shadow duration-300 border border-gray-100">
         <h3 className="text-xl font-bold text-gray-900 mb-6">Share Your Capsule</h3>
 
         {!shareToken ? (
@@ -194,7 +194,7 @@ const CapsuleExport = ({ skill, sessions }) => {
       </div>
 
       {/* Export Options */}
-      <div className="glass-card rounded-xl p-6">
+      <div className="bg-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-shadow duration-300 border border-gray-100">
         <h3 className="text-xl font-bold text-gray-900 mb-6">Export Options</h3>
         <div className="grid md:grid-cols-2 gap-4">
           <button

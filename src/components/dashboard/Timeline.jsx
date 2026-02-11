@@ -17,7 +17,7 @@ const Timeline = ({ sessions }) => {
   return (
     <div className="space-y-6">
       {/* Phase Progress */}
-      <div className="glass-card rounded-xl p-6">
+      <div className="bg-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-shadow duration-300 border border-gray-100">
         <h3 className="text-xl font-bold text-gray-900 mb-4">Learning Phase Distribution</h3>
         <div className="space-y-3">
           {phaseStats.map(({ phase, count }) => (
@@ -38,7 +38,7 @@ const Timeline = ({ sessions }) => {
       </div>
 
       {/* Timeline */}
-      <div className="glass-card rounded-xl p-6">
+      <div className="bg-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-shadow duration-300 border border-gray-100">
         <h3 className="text-xl font-bold text-gray-900 mb-6">Session Timeline</h3>
         <div className="relative">
           {/* Vertical line */}

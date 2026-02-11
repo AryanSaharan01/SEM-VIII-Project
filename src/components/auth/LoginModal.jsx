@@ -4,7 +4,7 @@ import { X, Mail, Loader } from 'lucide-react'
 import { loginWithEmail } from '../../services/api'
 import OTPVerification from './OTPVerification'
 
-const LoginModal = ({ isOpen, onClose, onLogin }) => {
+const LoginModal = ({ isOpen, onClose, setIsAuthenticated }) => {
   const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
   const [showOTP, setShowOTP] = useState(false)
@@ -35,7 +35,15 @@ const LoginModal = ({ isOpen, onClose, onLogin }) => {
   }
 
   const handleOTPSuccess = (userData) => {
-    onLogin(userData)
+    // Store user data and token in localStorage
+    localStorage.setItem('dtcs_token', 'mock-jwt-token-' + Date.now())
+    localStorage.setItem('dtcs_user', JSON.stringify(userData))
+    
+    // Set authentication state
+    if (setIsAuthenticated) {
+      setIsAuthenticated(true)
+    }
+    
     onClose()
   }
 
@@ -54,7 +62,7 @@ const LoginModal = ({ isOpen, onClose, onLogin }) => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50"
+            className="fixed inset-0 bg-black/60 backdrop-blur-md z-50"
           />
           
           <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
@@ -62,7 +70,7 @@ const LoginModal = ({ isOpen, onClose, onLogin }) => {
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="glass-card rounded-2xl p-8 max-w-md w-full relative"
+              className="bg-white rounded-2xl p-8 max-w-md w-full relative shadow-2xl border border-gray-100"
               onClick={(e) => e.stopPropagation()}
             >
               <button
@@ -123,8 +131,11 @@ const LoginModal = ({ isOpen, onClose, onLogin }) => {
                   </form>
 
                   <div className="mt-6 text-center text-sm text-gray-500">
-                    <p>For testing, use: <strong>test@skillledger.com</strong> (any OTP works)</p>
-                    <p className="mt-1">Or demo: <strong>demo@skillledger.com</strong> (OTP: 123456)</p>
+                    <p className="font-semibold text-gray-700 mb-2">Test Credentials:</p>
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-1">
+                      <p><strong>test@skillledger.com</strong> (any OTP works)</p>
+                      <p><strong>demo@skillledger.com</strong> (OTP: 123456)</p>
+                    </div>
                   </div>
                 </>
               ) : (

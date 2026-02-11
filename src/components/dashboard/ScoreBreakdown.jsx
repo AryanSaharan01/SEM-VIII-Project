@@ -6,7 +6,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 const ScoreBreakdown = ({ skill, data, sessions }) => {
   if (!data) {
     return (
-      <div className="glass-card rounded-xl p-6">
+      <div className="bg-white rounded-xl p-6 shadow-lg border border-gray-100">
         <div className="flex items-center justify-center h-64">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
         </div>
@@ -89,7 +89,7 @@ const ScoreBreakdown = ({ skill, data, sessions }) => {
   return (
     <div className="space-y-6">
       {/* Overall Score */}
-      <div className="glass-card rounded-xl p-8 bg-gradient-to-br from-primary-50 to-purple-50">
+      <div className="bg-gradient-to-br from-primary-50 to-purple-50 rounded-xl p-8 shadow-xl hover:shadow-2xl transition-shadow duration-300 border border-primary-100">
         <div className="text-center">
           <motion.div
             initial={{ scale: 0.5, opacity: 0 }}
@@ -110,7 +110,7 @@ const ScoreBreakdown = ({ skill, data, sessions }) => {
 
       {/* Insights Section */}
       {insights && (
-        <div className="glass-card rounded-xl p-6">
+        <div className="bg-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-shadow duration-300 border border-gray-100">
           <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
             <Brain className="w-6 h-6 mr-2 text-purple-600" />
             Learning Insights
@@ -259,7 +259,7 @@ const ScoreBreakdown = ({ skill, data, sessions }) => {
       {/* Charts Grid */}
       <div className="grid lg:grid-cols-2 gap-6">
         {/* Bar Chart */}
-        <div className="glass-card rounded-xl p-6">
+        <div className="bg-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-shadow duration-300 border border-gray-100">
           <h3 className="text-xl font-bold text-gray-900 mb-6">Component Breakdown</h3>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={chartData}>
@@ -290,7 +290,7 @@ const ScoreBreakdown = ({ skill, data, sessions }) => {
         </div>
 
         {/* Radar Chart */}
-        <div className="glass-card rounded-xl p-6">
+        <div className="bg-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-shadow duration-300 border border-gray-100">
           <h3 className="text-xl font-bold text-gray-900 mb-6">Skill Profile Radar</h3>
           <ResponsiveContainer width="100%" height={300}>
             <RadarChart data={radarData}>
@@ -311,7 +311,7 @@ const ScoreBreakdown = ({ skill, data, sessions }) => {
       </div>
 
       {/* Detailed Breakdown */}
-      <div className="glass-card rounded-xl p-6">
+      <div className="bg-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-shadow duration-300 border border-gray-100">
         <h3 className="text-xl font-bold text-gray-900 mb-6">Detailed Component Analysis</h3>
         <div className="space-y-4">
           {Object.entries(data).map(([key, value], index) => {

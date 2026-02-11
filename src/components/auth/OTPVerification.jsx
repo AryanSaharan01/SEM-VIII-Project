@@ -113,12 +113,16 @@ const OTPVerification = ({ email, onSuccess, onBack }) => {
         </div>
       )}
 
-      <div className="mt-6 text-center text-sm text-gray-500">
-        {email === 'test@skillledger.com' ? (
-          <p>Test mode: <strong>Any OTP will work</strong></p>
-        ) : (
-          <p>For demo, use OTP: <strong>123456</strong></p>
-        )}
+      <div className="mt-6 text-center text-sm">
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+          {email === 'test@skillledger.com' ? (
+            <p className="text-blue-700 font-semibold">Test mode: <strong>Any 6-digit OTP will work</strong></p>
+          ) : email === 'demo@skillledger.com' ? (
+            <p className="text-blue-700 font-semibold">Demo mode: Use OTP <strong>123456</strong></p>
+          ) : (
+            <p className="text-gray-600">For demo, use OTP: <strong>123456</strong></p>
+          )}
+        </div>
       </div>
     </div>
   )

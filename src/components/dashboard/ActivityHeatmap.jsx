@@ -53,7 +53,7 @@ const ActivityHeatmap = ({ data }) => {
     <div className="space-y-6">
       {/* Stats */}
       <div className="grid md:grid-cols-4 gap-4">
-        <div className="glass-card rounded-xl p-6">
+        <div className="bg-white rounded-xl p-6 shadow-md hover:shadow-lg transition-all duration-300 border border-gray-100">
           <div className="flex items-center justify-between mb-2">
             <span className="text-gray-600 text-sm">Total Sessions</span>
             <Calendar className="w-5 h-5 text-blue-600" />
@@ -62,7 +62,7 @@ const ActivityHeatmap = ({ data }) => {
           <div className="text-xs text-gray-500">Last 13 weeks</div>
         </div>
 
-        <div className="glass-card rounded-xl p-6 bg-gradient-to-br from-orange-50 to-red-50">
+        <div className="bg-gradient-to-br from-orange-50 to-red-50 rounded-xl p-6 shadow-md hover:shadow-lg transition-all duration-300 border border-orange-100">
           <div className="flex items-center justify-between mb-2">
             <span className="text-gray-700 text-sm font-medium">Current Streak</span>
             <Flame className="w-5 h-5 text-orange-500" />
@@ -71,7 +71,7 @@ const ActivityHeatmap = ({ data }) => {
           <div className="text-xs text-gray-600">Days in a row 🔥</div>
         </div>
 
-        <div className="glass-card rounded-xl p-6">
+        <div className="bg-white rounded-xl p-6 shadow-md hover:shadow-lg transition-all duration-300 border border-gray-100">
           <div className="flex items-center justify-between mb-2">
             <span className="text-gray-600 text-sm">Best Streak</span>
             <Target className="w-5 h-5 text-purple-600" />
@@ -80,7 +80,7 @@ const ActivityHeatmap = ({ data }) => {
           <div className="text-xs text-gray-500">Personal best</div>
         </div>
 
-        <div className="glass-card rounded-xl p-6">
+        <div className="bg-white rounded-xl p-6 shadow-md hover:shadow-lg transition-all duration-300 border border-gray-100">
           <div className="flex items-center justify-between mb-2">
             <span className="text-gray-600 text-sm">Avg per Week</span>
             <TrendingUp className="w-5 h-5 text-emerald-600" />
@@ -93,7 +93,7 @@ const ActivityHeatmap = ({ data }) => {
       </div>
 
       {/* Horizontal Heatmap */}
-      <div className="glass-card rounded-xl p-6">
+      <div className="bg-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-shadow duration-300 border border-gray-100">
         <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center justify-between">
           <span>Activity Heatmap - Last 13 Weeks</span>
           <div className="flex items-center space-x-2">
