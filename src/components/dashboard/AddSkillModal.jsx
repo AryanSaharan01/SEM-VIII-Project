@@ -13,9 +13,9 @@ const AddSkillModal = ({ isOpen, onClose, onAdd }) => {
   const categories = [
     { value: 'coding', label: 'Coding', icon: Code, color: 'bg-blue-100 text-blue-700 border-blue-300' },
     { value: 'writing', label: 'Writing', icon: FileText, color: 'bg-green-100 text-green-700 border-green-300' },
-    { value: 'design', label: 'Design', icon: Palette, color: 'bg-purple-100 text-purple-700 border-purple-300' },
-    { value: 'music', label: 'Music', icon: Music, color: 'bg-pink-100 text-pink-700 border-pink-300' },
-    { value: 'fitness', label: 'Fitness', icon: Dumbbell, color: 'bg-orange-100 text-orange-700 border-orange-300' },
+    // { value: 'design', label: 'Design', icon: Palette, color: 'bg-purple-100 text-purple-700 border-purple-300' },
+    // { value: 'music', label: 'Music', icon: Music, color: 'bg-pink-100 text-pink-700 border-pink-300' },
+    // { value: 'fitness', label: 'Fitness', icon: Dumbbell, color: 'bg-orange-100 text-orange-700 border-orange-300' },
     { value: 'other', label: 'Other', icon: Plus, color: 'bg-gray-100 text-gray-700 border-gray-300' }
   ]
 
