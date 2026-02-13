@@ -1,18 +1,21 @@
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Clock, FileText, Loader, Calendar, Target } from 'lucide-react'
+import { X, Clock, FileText, Loader, Calendar, Target, Paperclip } from 'lucide-react'
+import ProofOfWork from './ProofOfWork'
 
-const SessionLogger = ({ onClose, onSubmit, skills, selectedSkillId }) => {
+const SessionLogger = ({ onClose, onSubmit, skills, selectedSkillId, githubConnection }) => {
   const [formData, setFormData] = useState({
     skillId: selectedSkillId || (skills && skills.length > 0 ? skills[0].id : null),
     topic: '',
     notes: '',
     durationSeconds: 1800,
     difficulty: 'medium',
-    clientTs: new Date().toISOString()
+    clientTs: new Date().toISOString(),
+    proofOfWork: []
   })
   const [loading, setLoading] = useState(false)
   const [errors, setErrors] = useState({})
+  const [showProofOfWork, setShowProofOfWork] = useState(false)
 
   const difficultyLevels = [
     { value: 'easy', label: 'Easy', color: 'bg-green-100 text-green-700 border-green-300', emoji: '😊' },
@@ -20,6 +23,16 @@ const SessionLogger = ({ onClose, onSubmit, skills, selectedSkillId }) => {
     { value: 'hard', label: 'Hard', color: 'bg-orange-100 text-orange-700 border-orange-300', emoji: '😰' },
     { value: 'expert', label: 'Expert', color: 'bg-red-100 text-red-700 border-red-300', emoji: '🔥' }
   ]
+
+  // Check if selected skill is a coding-related skill
+  const selectedSkill = skills?.find(s => s.id === formData.skillId)
+  const isCodingSkill = selectedSkill?.category === 'Technical' || 
+    ['react', 'javascript', 'python', 'java', 'programming', 'coding', 'development', 'web', 'software', 'frontend', 'backend', 'fullstack', 'nodejs', 'typescript']
+      .some(keyword => selectedSkill?.name?.toLowerCase().includes(keyword))
+
+  const handleProofOfWorkChange = (files) => {
+    setFormData(prev => ({ ...prev, proofOfWork: files }))
+  }
 
   const handleChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }))
@@ -251,6 +264,64 @@ const SessionLogger = ({ onClose, onSubmit, skills, selectedSkillId }) => {
                   </ul>
                 </div>
               </div>
+            </div>
+
+            {/* Proof of Work Section */}
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <label className="block text-sm font-semibold text-gray-700">
+                  <Paperclip className="w-4 h-4 inline mr-1" />
+                  Proof of Work
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setShowProofOfWork(!showProofOfWork)}
+                  className="text-sm text-primary-600 hover:text-primary-700 font-medium"
+                >
+                  {showProofOfWork ? 'Hide' : formData.proofOfWork.length > 0 ? `${formData.proofOfWork.length} files attached` : 'Add files'}
+                </button>
+              </div>
+              
+              {formData.proofOfWork.length > 0 && !showProofOfWork && (
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {formData.proofOfWork.slice(0, 3).map((file, index) => (
+                    <span key={index} className="inline-flex items-center px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-xs">
+                      <Paperclip className="w-3 h-3 mr-1" />
+                      {file.name}
+                    </span>
+                  ))}
+                  {formData.proofOfWork.length > 3 && (
+                    <span className="inline-flex items-center px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-xs">
+                      +{formData.proofOfWork.length - 3} more
+                    </span>
+                  )}
+                </div>
+              )}
+
+              <AnimatePresence>
+                {showProofOfWork && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="overflow-hidden"
+                  >
+                    <ProofOfWork
+                      isCodingSkill={isCodingSkill}
+                      githubConnection={githubConnection}
+                      attachedFiles={formData.proofOfWork}
+                      onFilesChange={handleProofOfWorkChange}
+                    />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+              
+              <p className="text-xs text-gray-500 mt-2">
+                {isCodingSkill && githubConnection 
+                  ? 'Attach code files from your GitHub repo or upload other files as proof'
+                  : 'Upload PDFs, images, or other files as proof of your learning'
+                }
+              </p>
             </div>
 
             {/* Submit */}
