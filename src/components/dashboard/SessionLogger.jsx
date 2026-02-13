@@ -1,9 +1,8 @@
-import React, { useState } from 'react'
+import React, { useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Clock, FileText, Loader, Calendar, Target, Paperclip } from 'lucide-react'
-import ProofOfWork from './ProofOfWork'
+import { X, Clock, FileText, Loader, Calendar, Target, Paperclip, Github, Upload, Folder, ChevronRight, ChevronDown, File, Image, Trash2 } from 'lucide-react'
 
-const SessionLogger = ({ onClose, onSubmit, skills, selectedSkillId, githubConnection }) => {
+const SessionLogger = ({ onClose, onSubmit, skills, selectedSkillId, connectedRepos = [] }) => {
   const [formData, setFormData] = useState({
     skillId: selectedSkillId || (skills && skills.length > 0 ? skills[0].id : null),
     topic: '',
@@ -16,6 +15,10 @@ const SessionLogger = ({ onClose, onSubmit, skills, selectedSkillId, githubConne
   const [loading, setLoading] = useState(false)
   const [errors, setErrors] = useState({})
   const [showProofOfWork, setShowProofOfWork] = useState(false)
+  const [expandedFolders, setExpandedFolders] = useState({})
+  const [selectedGitHubFiles, setSelectedGitHubFiles] = useState([])
+  const [uploadedFiles, setUploadedFiles] = useState([])
+  const fileInputRef = useRef(null)
 
   const difficultyLevels = [
     { value: 'easy', label: 'Easy', color: 'bg-green-100 text-green-700 border-green-300', emoji: '😊' },
@@ -24,11 +27,82 @@ const SessionLogger = ({ onClose, onSubmit, skills, selectedSkillId, githubConne
     { value: 'expert', label: 'Expert', color: 'bg-red-100 text-red-700 border-red-300', emoji: '🔥' }
   ]
 
-  // Check if selected skill is a coding-related skill
+  // Get the selected skill and check if it's a coding skill with linked repo
   const selectedSkill = skills?.find(s => s.id === formData.skillId)
-  const isCodingSkill = selectedSkill?.category === 'Technical' || 
-    ['react', 'javascript', 'python', 'java', 'programming', 'coding', 'development', 'web', 'software', 'frontend', 'backend', 'fullstack', 'nodejs', 'typescript']
-      .some(keyword => selectedSkill?.name?.toLowerCase().includes(keyword))
+  const isCodingSkill = selectedSkill?.category === 'coding'
+  const linkedRepo = selectedSkill?.linkedRepo
+
+  // Mock file structure for repos
+  const mockRepoFiles = {
+    'src': [
+      { name: 'components', type: 'dir', path: 'src/components' },
+      { name: 'pages', type: 'dir', path: 'src/pages' },
+      { name: 'utils', type: 'dir', path: 'src/utils' },
+      { name: 'App.jsx', type: 'file', path: 'src/App.jsx' },
+      { name: 'index.js', type: 'file', path: 'src/index.js' },
+      { name: 'styles.css', type: 'file', path: 'src/styles.css' },
+    ],
+    'src/components': [
+      { name: 'Header.jsx', type: 'file', path: 'src/components/Header.jsx' },
+      { name: 'Footer.jsx', type: 'file', path: 'src/components/Footer.jsx' },
+      { name: 'Sidebar.jsx', type: 'file', path: 'src/components/Sidebar.jsx' },
+      { name: 'Card.jsx', type: 'file', path: 'src/components/Card.jsx' },
+    ],
+    'src/pages': [
+      { name: 'Home.jsx', type: 'file', path: 'src/pages/Home.jsx' },
+      { name: 'Dashboard.jsx', type: 'file', path: 'src/pages/Dashboard.jsx' },
+      { name: 'Profile.jsx', type: 'file', path: 'src/pages/Profile.jsx' },
+    ],
+    'src/utils': [
+      { name: 'helpers.js', type: 'file', path: 'src/utils/helpers.js' },
+      { name: 'api.js', type: 'file', path: 'src/utils/api.js' },
+    ],
+    'root': [
+      { name: 'src', type: 'dir', path: 'src' },
+      { name: 'public', type: 'dir', path: 'public' },
+      { name: 'package.json', type: 'file', path: 'package.json' },
+      { name: 'README.md', type: 'file', path: 'README.md' },
+      { name: 'vite.config.js', type: 'file', path: 'vite.config.js' },
+    ]
+  }
+
+  const toggleFolder = (path) => {
+    setExpandedFolders(prev => ({
+      ...prev,
+      [path]: !prev[path]
+    }))
+  }
+
+  const toggleGitHubFileSelection = (file) => {
+    setSelectedGitHubFiles(prev => {
+      const isSelected = prev.some(f => f.path === file.path)
+      if (isSelected) {
+        return prev.filter(f => f.path !== file.path)
+      } else {
+        return [...prev, { ...file, type: 'github', repoName: linkedRepo?.name }]
+      }
+    })
+  }
+
+  const handleFileUpload = (e) => {
+    const files = Array.from(e.target.files)
+    const newFiles = files.map(file => ({
+      name: file.name,
+      size: file.size,
+      type: 'upload',
+      fileType: file.type,
+      file: file
+    }))
+    setUploadedFiles(prev => [...prev, ...newFiles])
+  }
+
+  const removeUploadedFile = (index) => {
+    setUploadedFiles(prev => prev.filter((_, i) => i !== index))
+  }
+
+  const removeGitHubFile = (path) => {
+    setSelectedGitHubFiles(prev => prev.filter(f => f.path !== path))
+  }
 
   const handleProofOfWorkChange = (files) => {
     setFormData(prev => ({ ...prev, proofOfWork: files }))
@@ -62,10 +136,17 @@ const SessionLogger = ({ onClose, onSubmit, skills, selectedSkillId, githubConne
 
     setLoading(true)
     try {
+      // Combine all proof of work files
+      const allProofOfWork = [
+        ...selectedGitHubFiles,
+        ...uploadedFiles.map(f => ({ name: f.name, type: 'upload', fileType: f.fileType }))
+      ]
+      
       // Update timestamp to current time when submitting
       const submitData = {
         ...formData,
-        clientTs: new Date().toISOString()
+        clientTs: new Date().toISOString(),
+        proofOfWork: allProofOfWork
       }
       await onSubmit(submitData)
     } catch (error) {
@@ -268,60 +349,115 @@ const SessionLogger = ({ onClose, onSubmit, skills, selectedSkillId, githubConne
 
             {/* Proof of Work Section */}
             <div>
-              <div className="flex items-center justify-between mb-3">
-                <label className="block text-sm font-semibold text-gray-700">
-                  <Paperclip className="w-4 h-4 inline mr-1" />
-                  Proof of Work
-                </label>
-                <button
-                  type="button"
-                  onClick={() => setShowProofOfWork(!showProofOfWork)}
-                  className="text-sm text-primary-600 hover:text-primary-700 font-medium"
-                >
-                  {showProofOfWork ? 'Hide' : formData.proofOfWork.length > 0 ? `${formData.proofOfWork.length} files attached` : 'Add files'}
-                </button>
-              </div>
+              <label className="block text-sm font-semibold text-gray-700 mb-3">
+                <Paperclip className="w-4 h-4 inline mr-1" />
+                Proof of Work (Optional)
+              </label>
               
-              {formData.proofOfWork.length > 0 && !showProofOfWork && (
-                <div className="flex flex-wrap gap-2 mb-3">
-                  {formData.proofOfWork.slice(0, 3).map((file, index) => (
-                    <span key={index} className="inline-flex items-center px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-xs">
-                      <Paperclip className="w-3 h-3 mr-1" />
-                      {file.name}
-                    </span>
-                  ))}
-                  {formData.proofOfWork.length > 3 && (
-                    <span className="inline-flex items-center px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-xs">
-                      +{formData.proofOfWork.length - 3} more
-                    </span>
+              {/* For Coding Skills with Linked Repo - Show GitHub File Browser */}
+              {isCodingSkill && linkedRepo ? (
+                <div className="space-y-4">
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                    <div className="flex items-center space-x-2 mb-3">
+                      <Github className="w-5 h-5 text-gray-700" />
+                      <span className="font-medium text-gray-900">{linkedRepo.name}</span>
+                      <span className="text-xs text-gray-500">• Select files as proof</span>
+                    </div>
+                    
+                    {/* File Tree */}
+                    <div className="max-h-48 overflow-y-auto border border-gray-200 rounded-lg bg-white">
+                      {renderFileTree(mockRepoFiles['root'], '')}
+                    </div>
+                  </div>
+
+                  {/* Selected GitHub Files */}
+                  {selectedGitHubFiles.length > 0 && (
+                    <div>
+                      <p className="text-xs text-gray-600 mb-2">Selected files ({selectedGitHubFiles.length}):</p>
+                      <div className="space-y-1">
+                        {selectedGitHubFiles.map((file, index) => (
+                          <div key={index} className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
+                            <div className="flex items-center space-x-2">
+                              <Github className="w-4 h-4 text-blue-600" />
+                              <span className="text-sm text-gray-800">{file.path}</span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => removeGitHubFile(file.path)}
+                              className="text-gray-400 hover:text-red-500"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                /* For Non-Coding Skills or Coding Skills without Linked Repo - Show File Upload */
+                <div className="space-y-4">
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileUpload}
+                    multiple
+                    accept=".pdf,.png,.jpg,.jpeg,.gif,.doc,.docx,.txt,.md"
+                    className="hidden"
+                  />
+                  
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-primary-500 hover:bg-primary-50 transition-all"
+                  >
+                    <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                    <p className="text-sm text-gray-600">
+                      Click to upload files
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      PDF, Images, Documents (max 10MB each)
+                    </p>
+                  </button>
+
+                  {/* Uploaded Files */}
+                  {uploadedFiles.length > 0 && (
+                    <div>
+                      <p className="text-xs text-gray-600 mb-2">Uploaded files ({uploadedFiles.length}):</p>
+                      <div className="space-y-1">
+                        {uploadedFiles.map((file, index) => (
+                          <div key={index} className="flex items-center justify-between bg-green-50 border border-green-200 rounded-lg px-3 py-2">
+                            <div className="flex items-center space-x-2">
+                              {file.fileType?.startsWith('image/') ? (
+                                <Image className="w-4 h-4 text-green-600" />
+                              ) : (
+                                <FileText className="w-4 h-4 text-green-600" />
+                              )}
+                              <span className="text-sm text-gray-800">{file.name}</span>
+                              <span className="text-xs text-gray-500">
+                                ({(file.size / 1024).toFixed(1)} KB)
+                              </span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => removeUploadedFile(index)}
+                              className="text-gray-400 hover:text-red-500"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {isCodingSkill && !linkedRepo && (
+                    <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg p-3">
+                      💡 Tip: Link a GitHub repository to this skill to select code files as proof of work
+                    </p>
                   )}
                 </div>
               )}
-
-              <AnimatePresence>
-                {showProofOfWork && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    exit={{ opacity: 0, height: 0 }}
-                    className="overflow-hidden"
-                  >
-                    <ProofOfWork
-                      isCodingSkill={isCodingSkill}
-                      githubConnection={githubConnection}
-                      attachedFiles={formData.proofOfWork}
-                      onFilesChange={handleProofOfWorkChange}
-                    />
-                  </motion.div>
-                )}
-              </AnimatePresence>
-              
-              <p className="text-xs text-gray-500 mt-2">
-                {isCodingSkill && githubConnection 
-                  ? 'Attach code files from your GitHub repo or upload other files as proof'
-                  : 'Upload PDFs, images, or other files as proof of your learning'
-                }
-              </p>
             </div>
 
             {/* Submit */}
@@ -356,6 +492,59 @@ const SessionLogger = ({ onClose, onSubmit, skills, selectedSkillId, githubConne
       </motion.div>
     </AnimatePresence>
   )
+
+  // Helper function to render file tree
+  function renderFileTree(items, parentPath) {
+    return (
+      <div className="text-sm">
+        {items.map((item) => (
+          <div key={item.path}>
+            {item.type === 'dir' ? (
+              <div>
+                <button
+                  type="button"
+                  onClick={() => toggleFolder(item.path)}
+                  className="w-full flex items-center space-x-2 px-3 py-1.5 hover:bg-gray-50 text-left"
+                >
+                  {expandedFolders[item.path] ? (
+                    <ChevronDown className="w-4 h-4 text-gray-400" />
+                  ) : (
+                    <ChevronRight className="w-4 h-4 text-gray-400" />
+                  )}
+                  <Folder className="w-4 h-4 text-yellow-500" />
+                  <span className="text-gray-700">{item.name}</span>
+                </button>
+                {expandedFolders[item.path] && mockRepoFiles[item.path] && (
+                  <div className="ml-4">
+                    {renderFileTree(mockRepoFiles[item.path], item.path)}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => toggleGitHubFileSelection(item)}
+                className={`w-full flex items-center space-x-2 px-3 py-1.5 hover:bg-gray-50 text-left ${
+                  selectedGitHubFiles.some(f => f.path === item.path) ? 'bg-blue-50' : ''
+                }`}
+              >
+                <span className="w-4" />
+                <File className={`w-4 h-4 ${
+                  selectedGitHubFiles.some(f => f.path === item.path) ? 'text-blue-600' : 'text-gray-400'
+                }`} />
+                <span className={`${
+                  selectedGitHubFiles.some(f => f.path === item.path) ? 'text-blue-700 font-medium' : 'text-gray-700'
+                }`}>{item.name}</span>
+                {selectedGitHubFiles.some(f => f.path === item.path) && (
+                  <span className="ml-auto text-blue-600 text-xs">✓</span>
+                )}
+              </button>
+            )}
+          </div>
+        ))}
+      </div>
+    )
+  }
 }
 
 export default SessionLogger

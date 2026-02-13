@@ -1,14 +1,158 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   X, Clock, Calendar, Lock, Shield, Github, 
   FileText, Image, FileCode, ExternalLink, Download,
-  ChevronRight, Hash, Link2
+  ChevronRight, Hash, Link2, Code, Eye, ChevronDown
 } from 'lucide-react'
 import { formatDate, formatDuration, getPhaseColor } from '../../utils/helpers'
 
 const SessionDetail = ({ onClose, session }) => {
+  const [selectedFile, setSelectedFile] = useState(null)
+  const [showCodeViewer, setShowCodeViewer] = useState(false)
+
   if (!session) return null
+
+  // Mock file contents for GitHub files
+  const mockFileContents = {
+    'src/App.jsx': `import React, { useState } from 'react'
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import Landing from './pages/Landing'
+import Dashboard from './pages/Dashboard'
+import './App.css'
+
+function App() {
+  const [user, setUser] = useState(null)
+
+  return (
+    <Router>
+      <div className="min-h-screen bg-gray-50">
+        <Routes>
+          <Route path="/" element={<Landing onLogin={setUser} />} />
+          <Route path="/dashboard" element={<Dashboard user={user} />} />
+        </Routes>
+      </div>
+    </Router>
+  )
+}
+
+export default App`,
+    'src/components/Header.jsx': `import React from 'react'
+import { Link } from 'react-router-dom'
+import { Menu, X, User } from 'lucide-react'
+
+const Header = ({ user, onLogout }) => {
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
+
+  return (
+    <header className="bg-white shadow-sm border-b">
+      <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex justify-between h-16">
+          <div className="flex items-center">
+            <Link to="/" className="font-bold text-xl">
+              SkillLedger
+            </Link>
+          </div>
+          {user && (
+            <div className="flex items-center space-x-4">
+              <span className="text-gray-700">{user.name}</span>
+              <button onClick={onLogout}>Logout</button>
+            </div>
+          )}
+        </div>
+      </nav>
+    </header>
+  )
+}
+
+export default Header`,
+    'src/pages/Dashboard.jsx': `import React, { useState, useEffect } from 'react'
+import { motion } from 'framer-motion'
+import Sidebar from '../components/dashboard/Sidebar'
+import SkillCard from '../components/dashboard/SkillCard'
+import Timeline from '../components/dashboard/Timeline'
+
+const Dashboard = ({ user }) => {
+  const [skills, setSkills] = useState([])
+  const [selectedSkill, setSelectedSkill] = useState(null)
+
+  useEffect(() => {
+    // Load user skills
+    loadSkills()
+  }, [])
+
+  const loadSkills = async () => {
+    const data = await fetchSkills()
+    setSkills(data)
+    if (data.length > 0) setSelectedSkill(data[0])
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-100">
+      <Sidebar skills={skills} onSelectSkill={setSelectedSkill} />
+      <main className="ml-64 p-8">
+        {selectedSkill && <SkillCard skill={selectedSkill} />}
+      </main>
+    </div>
+  )
+}
+
+export default Dashboard`,
+    'src/utils/helpers.js': `// Helper utility functions
+
+export const formatDate = (dateString) => {
+  const date = new Date(dateString)
+  return date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric'
+  })
+}
+
+export const formatDuration = (seconds) => {
+  const hours = Math.floor(seconds / 3600)
+  const minutes = Math.floor((seconds % 3600) / 60)
+  if (hours > 0) return \`\${hours}h \${minutes}m\`
+  return \`\${minutes}m\`
+}
+
+export const getPhaseColor = (phase) => {
+  const colors = {
+    'Exposure': 'bg-purple-500',
+    'Confusion': 'bg-red-500',
+    'Learning': 'bg-yellow-500',
+    'Integration': 'bg-blue-500',
+    'Proficiency': 'bg-green-500'
+  }
+  return colors[phase] || 'bg-gray-500'
+}`,
+    'package.json': `{
+  "name": "skill-ledger",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.0.0",
+    "framer-motion": "^10.0.0",
+    "lucide-react": "^0.263.0",
+    "tailwindcss": "^3.0.0"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  }
+}`
+  }
+
+  const getFileContent = (file) => {
+    // For GitHub files, try to get mock content
+    if (file.type === 'github') {
+      return mockFileContents[file.path] || `// Content of ${file.path}\n// File loaded from GitHub repository\n\nconsole.log('Hello from ${file.name}');`
+    }
+    return null
+  }
 
   const getFileIcon = (proof) => {
     if (proof.type === 'github') return <FileCode className="w-5 h-5 text-blue-600" />
@@ -27,6 +171,35 @@ const SessionDetail = ({ onClose, session }) => {
     }
   }
 
+  const getLanguageFromFile = (filename) => {
+    const ext = filename.split('.').pop()?.toLowerCase()
+    const langMap = {
+      'js': 'javascript',
+      'jsx': 'javascript',
+      'ts': 'typescript',
+      'tsx': 'typescript',
+      'py': 'python',
+      'java': 'java',
+      'css': 'css',
+      'html': 'html',
+      'json': 'json',
+      'md': 'markdown'
+    }
+    return langMap[ext] || 'plaintext'
+  }
+
+  // Get all proof of work files (support both 'proofs' and 'proofOfWork' keys)
+  const proofFiles = session.proofOfWork || session.proofs || []
+  const githubFiles = proofFiles.filter(f => f.type === 'github')
+  const uploadedFiles = proofFiles.filter(f => f.type === 'upload')
+
+  const handleFileClick = (file) => {
+    if (file.type === 'github') {
+      setSelectedFile(file)
+      setShowCodeViewer(true)
+    }
+  }
+
   return (
     <AnimatePresence>
       <motion.div
@@ -41,7 +214,7 @@ const SessionDetail = ({ onClose, session }) => {
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.9, y: 20 }}
           onClick={(e) => e.stopPropagation()}
-          className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden shadow-2xl border border-gray-100 flex flex-col"
+          className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden shadow-2xl border border-gray-100 flex flex-col"
         >
           {/* Header */}
           <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-primary-50 to-purple-50">
@@ -67,6 +240,12 @@ const SessionDetail = ({ onClose, session }) => {
                     <Clock className="w-4 h-4 mr-1.5" />
                     {formatDuration(session.durationSeconds)}
                   </span>
+                  {proofFiles.length > 0 && (
+                    <span className="flex items-center text-primary-600">
+                      <FileCode className="w-4 h-4 mr-1.5" />
+                      {proofFiles.length} files attached
+                    </span>
+                  )}
                 </div>
               </div>
               <button
@@ -92,47 +271,160 @@ const SessionDetail = ({ onClose, session }) => {
               </div>
             </div>
 
-            {/* Proof of Work Section */}
-            {session.proofs && session.proofs.length > 0 && (
+            {/* Proof of Work Section - Enhanced */}
+            {proofFiles.length > 0 && (
               <div>
                 <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-3">
-                  Proof of Work ({session.proofs.length} files)
+                  Proof of Work ({proofFiles.length} files)
                 </h3>
-                <div className="space-y-2">
-                  {session.proofs.map((proof, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-xl hover:shadow-md transition-shadow"
-                    >
-                      <div className="flex items-center space-x-3">
-                        {getFileIcon(proof)}
-                        <div>
-                          <p className="font-medium text-gray-900">{proof.name}</p>
-                          <p className="text-xs text-gray-500">
-                            {proof.type === 'github' ? (
-                              <span className="flex items-center">
-                                <Github className="w-3 h-3 mr-1" />
-                                {proof.repo}/{proof.path}
-                              </span>
-                            ) : (
-                              `Uploaded file • ${proof.fileType || 'document'}`
-                            )}
-                          </p>
+                
+                {/* GitHub Files */}
+                {githubFiles.length > 0 && (
+                  <div className="mb-4">
+                    <div className="flex items-center space-x-2 mb-2">
+                      <Github className="w-4 h-4 text-gray-600" />
+                      <span className="text-sm font-medium text-gray-700">GitHub Files</span>
+                    </div>
+                    <div className="grid gap-2">
+                      {githubFiles.map((file, index) => (
+                        <button
+                          key={index}
+                          onClick={() => handleFileClick(file)}
+                          className={`flex items-center justify-between p-3 bg-white border rounded-lg hover:shadow-md transition-all text-left ${
+                            selectedFile?.path === file.path 
+                              ? 'border-primary-500 bg-primary-50 ring-2 ring-primary-200' 
+                              : 'border-gray-200 hover:border-primary-300'
+                          }`}
+                        >
+                          <div className="flex items-center space-x-3">
+                            <FileCode className="w-5 h-5 text-blue-600" />
+                            <div>
+                              <p className="font-medium text-gray-900">{file.name || file.path.split('/').pop()}</p>
+                              <p className="text-xs text-gray-500">{file.path}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <span className="text-xs text-primary-600 font-medium">View Code</span>
+                            <Eye className="w-4 h-4 text-primary-600" />
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Code Viewer */}
+                {showCodeViewer && selectedFile && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="mb-4"
+                  >
+                    <div className="bg-gray-900 rounded-xl overflow-hidden border border-gray-700">
+                      {/* Code Viewer Header */}
+                      <div className="flex items-center justify-between px-4 py-2 bg-gray-800 border-b border-gray-700">
+                        <div className="flex items-center space-x-3">
+                          <div className="flex space-x-1.5">
+                            <div className="w-3 h-3 rounded-full bg-red-500" />
+                            <div className="w-3 h-3 rounded-full bg-yellow-500" />
+                            <div className="w-3 h-3 rounded-full bg-green-500" />
+                          </div>
+                          <span className="text-sm text-gray-300 font-mono">{selectedFile.path}</span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          {githubFiles.length > 1 && (
+                            <select
+                              value={selectedFile.path}
+                              onChange={(e) => {
+                                const file = githubFiles.find(f => f.path === e.target.value)
+                                if (file) setSelectedFile(file)
+                              }}
+                              className="text-xs bg-gray-700 text-gray-300 border border-gray-600 rounded px-2 py-1"
+                            >
+                              {githubFiles.map((file, idx) => (
+                                <option key={idx} value={file.path}>
+                                  {file.name || file.path.split('/').pop()}
+                                </option>
+                              ))}
+                            </select>
+                          )}
+                          <button
+                            onClick={() => setShowCodeViewer(false)}
+                            className="text-gray-400 hover:text-white transition-colors"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
                         </div>
                       </div>
-                      <div className="flex items-center space-x-2">
-                        {proof.type === 'github' && (
-                          <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors">
-                            <ExternalLink className="w-4 h-4" />
-                          </button>
-                        )}
-                        <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors">
-                          <Download className="w-4 h-4" />
-                        </button>
+                      
+                      {/* Code Content */}
+                      <div className="p-4 overflow-x-auto max-h-80 overflow-y-auto">
+                        <pre className="text-sm font-mono">
+                          <code className="text-gray-300">
+                            {getFileContent(selectedFile)?.split('\n').map((line, idx) => (
+                              <div key={idx} className="flex">
+                                <span className="text-gray-600 select-none w-8 text-right mr-4 flex-shrink-0">
+                                  {idx + 1}
+                                </span>
+                                <span className="flex-1">{line || ' '}</span>
+                              </div>
+                            ))}
+                          </code>
+                        </pre>
+                      </div>
+                      
+                      {/* Code Viewer Footer */}
+                      <div className="px-4 py-2 bg-gray-800 border-t border-gray-700 flex items-center justify-between">
+                        <span className="text-xs text-gray-500">
+                          {getLanguageFromFile(selectedFile.path)} • {getFileContent(selectedFile)?.split('\n').length || 0} lines
+                        </span>
+                        <a
+                          href={`https://github.com/${selectedFile.repoName || 'user/repo'}/blob/main/${selectedFile.path}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-blue-400 hover:text-blue-300 flex items-center"
+                        >
+                          <ExternalLink className="w-3 h-3 mr-1" />
+                          View on GitHub
+                        </a>
                       </div>
                     </div>
-                  ))}
-                </div>
+                  </motion.div>
+                )}
+
+                {/* Uploaded Files */}
+                {uploadedFiles.length > 0 && (
+                  <div>
+                    <div className="flex items-center space-x-2 mb-2">
+                      <FileText className="w-4 h-4 text-gray-600" />
+                      <span className="text-sm font-medium text-gray-700">Uploaded Files</span>
+                    </div>
+                    <div className="grid gap-2">
+                      {uploadedFiles.map((file, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg"
+                        >
+                          <div className="flex items-center space-x-3">
+                            {file.fileType?.startsWith('image/') ? (
+                              <Image className="w-5 h-5 text-green-600" />
+                            ) : (
+                              <FileText className="w-5 h-5 text-red-600" />
+                            )}
+                            <div>
+                              <p className="font-medium text-gray-900">{file.name}</p>
+                              <p className="text-xs text-gray-500">{file.fileType || 'document'}</p>
+                            </div>
+                          </div>
+                          <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors">
+                            <Download className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
