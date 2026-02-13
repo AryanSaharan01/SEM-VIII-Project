@@ -211,6 +211,7 @@ export const addSkill = async (skillData) => {
     userId: 1,
     name: skillData.name,
     category: skillData.category,
+    linkedRepo: skillData.linkedRepo || null,
     createdAt: new Date().toISOString(),
     score: 0,
     consistencyScore: 0,

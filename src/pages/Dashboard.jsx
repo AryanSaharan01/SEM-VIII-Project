@@ -38,10 +38,10 @@ const Dashboard = ({ user, onLogout }) => {
   const [heatmapData, setHeatmapData] = useState([])
   const [scoreData, setScoreData] = useState(null)
   
-  // GitHub connection state
-  const [githubConnection, setGithubConnection] = useState(() => {
-    const saved = localStorage.getItem('skillLedgerGitHub')
-    return saved ? JSON.parse(saved) : null
+  // GitHub connected repos (multiple)
+  const [connectedRepos, setConnectedRepos] = useState(() => {
+    const saved = localStorage.getItem('skillLedgerGitHubRepos')
+    return saved ? JSON.parse(saved) : []
   })
 
   // Save to sessionStorage whenever skills or sessions change
@@ -148,12 +148,12 @@ const Dashboard = ({ user, onLogout }) => {
     setShowAddSkill(false)
   }
 
-  const handleGitHubConnect = (connection) => {
-    setGithubConnection(connection)
-    if (connection) {
-      localStorage.setItem('skillLedgerGitHub', JSON.stringify(connection))
+  const handleGitHubConnect = (repos) => {
+    setConnectedRepos(repos)
+    if (repos && repos.length > 0) {
+      localStorage.setItem('skillLedgerGitHubRepos', JSON.stringify(repos))
     } else {
-      localStorage.removeItem('skillLedgerGitHub')
+      localStorage.removeItem('skillLedgerGitHubRepos')
     }
   }
 
@@ -288,17 +288,27 @@ const Dashboard = ({ user, onLogout }) => {
             {/* GitHub Integration */}
             <div className="bg-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-shadow duration-300 border border-gray-100">
               <h3 className="text-sm font-semibold text-gray-700 mb-4">GitHub Integration</h3>
-              {githubConnection ? (
+              {connectedRepos.length > 0 ? (
                 <div className="space-y-3">
-                  <div className="flex items-center space-x-2 text-sm text-green-700 bg-green-50 p-3 rounded-lg">
-                    <Github className="w-4 h-4" />
-                    <span className="font-medium">{githubConnection.repo?.name || 'Connected'}</span>
+                  <div className="text-sm text-green-700 bg-green-50 p-3 rounded-lg">
+                    <div className="flex items-center space-x-2 mb-2">
+                      <Github className="w-4 h-4" />
+                      <span className="font-medium">{connectedRepos.length} repos connected</span>
+                    </div>
+                    <div className="text-xs text-green-600 space-y-1">
+                      {connectedRepos.slice(0, 3).map(repo => (
+                        <div key={repo.id} className="truncate">• {repo.name}</div>
+                      ))}
+                      {connectedRepos.length > 3 && (
+                        <div>+{connectedRepos.length - 3} more</div>
+                      )}
+                    </div>
                   </div>
                   <button
                     onClick={() => setShowGitHubConnect(true)}
                     className="w-full text-sm py-2 text-gray-600 hover:text-gray-900 transition-colors"
                   >
-                    Manage Connection
+                    Manage Repositories
                   </button>
                 </div>
               ) : (
@@ -311,7 +321,7 @@ const Dashboard = ({ user, onLogout }) => {
                 </button>
               )}
               <p className="text-xs text-gray-500 mt-3">
-                Link your repos to attach code as proof of work
+                Link repos to attach code as proof of work
               </p>
             </div>
           </div>
@@ -532,7 +542,7 @@ const Dashboard = ({ user, onLogout }) => {
           onSubmit={handleCreateSession}
           skills={skills}
           selectedSkillId={selectedSkill?.id}
-          githubConnection={githubConnection}
+          connectedRepos={connectedRepos}
         />
       )}
 
@@ -542,6 +552,7 @@ const Dashboard = ({ user, onLogout }) => {
           isOpen={showAddSkill}
           onClose={() => setShowAddSkill(false)}
           onAdd={handleAddSkill}
+          connectedRepos={connectedRepos}
         />
       )}
 
@@ -550,7 +561,7 @@ const Dashboard = ({ user, onLogout }) => {
         <GitHubConnect
           onClose={() => setShowGitHubConnect(false)}
           onConnect={handleGitHubConnect}
-          existingConnection={githubConnection}
+          connectedRepos={connectedRepos}
         />
       )}
 
