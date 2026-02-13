@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { 
   Shield, Plus, LogOut, TrendingUp, Clock, 
-  Calendar, Share2, BarChart3, FileText, Eye
+  Calendar, Share2, BarChart3, FileText, Eye, Github, ChevronRight, Paperclip
 } from 'lucide-react'
 import { getSkills, getSessions, createSession, getScoreBreakdown, getActivityHeatmap, addSkill } from '../services/api'
 import { formatDuration, formatDate, getScoreLabel, getPhaseColor } from '../utils/helpers'
@@ -15,6 +15,8 @@ import ActivityHeatmap from '../components/dashboard/ActivityHeatmap'
 import ScoreBreakdown from '../components/dashboard/ScoreBreakdown'
 import CapsuleExport from '../components/dashboard/CapsuleExport'
 import AddSkillModal from '../components/dashboard/AddSkillModal'
+import GitHubConnect from '../components/dashboard/GitHubConnect'
+import SessionDetail from '../components/dashboard/SessionDetail'
 
 const Dashboard = ({ user, onLogout }) => {
   // Load from sessionStorage or use default
@@ -30,9 +32,17 @@ const Dashboard = ({ user, onLogout }) => {
   const [loading, setLoading] = useState(true)
   const [showSessionLogger, setShowSessionLogger] = useState(false)
   const [showAddSkill, setShowAddSkill] = useState(false)
+  const [showGitHubConnect, setShowGitHubConnect] = useState(false)
+  const [selectedSession, setSelectedSession] = useState(null)
   const [activeView, setActiveView] = useState('overview')
   const [heatmapData, setHeatmapData] = useState([])
   const [scoreData, setScoreData] = useState(null)
+  
+  // GitHub connection state
+  const [githubConnection, setGithubConnection] = useState(() => {
+    const saved = localStorage.getItem('skillLedgerGitHub')
+    return saved ? JSON.parse(saved) : null
+  })
 
   // Save to sessionStorage whenever skills or sessions change
   useEffect(() => {
@@ -136,6 +146,15 @@ const Dashboard = ({ user, onLogout }) => {
     sessionStorage.setItem('skillLedgerSkills', JSON.stringify(updatedSkills))
     setSelectedSkill(newSkill)
     setShowAddSkill(false)
+  }
+
+  const handleGitHubConnect = (connection) => {
+    setGithubConnection(connection)
+    if (connection) {
+      localStorage.setItem('skillLedgerGitHub', JSON.stringify(connection))
+    } else {
+      localStorage.removeItem('skillLedgerGitHub')
+    }
   }
 
   const handleCreateSession = async (sessionData) => {
@@ -265,6 +284,36 @@ const Dashboard = ({ user, onLogout }) => {
                 </button>
               </div>
             </div>
+
+            {/* GitHub Integration */}
+            <div className="bg-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-shadow duration-300 border border-gray-100">
+              <h3 className="text-sm font-semibold text-gray-700 mb-4">GitHub Integration</h3>
+              {githubConnection ? (
+                <div className="space-y-3">
+                  <div className="flex items-center space-x-2 text-sm text-green-700 bg-green-50 p-3 rounded-lg">
+                    <Github className="w-4 h-4" />
+                    <span className="font-medium">{githubConnection.repo?.name || 'Connected'}</span>
+                  </div>
+                  <button
+                    onClick={() => setShowGitHubConnect(true)}
+                    className="w-full text-sm py-2 text-gray-600 hover:text-gray-900 transition-colors"
+                  >
+                    Manage Connection
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setShowGitHubConnect(true)}
+                  className="w-full flex items-center justify-center space-x-2 bg-gray-900 text-white py-2.5 rounded-lg hover:bg-gray-800 transition-colors text-sm shadow-md hover:shadow-lg"
+                >
+                  <Github className="w-4 h-4" />
+                  <span>Connect GitHub</span>
+                </button>
+              )}
+              <p className="text-xs text-gray-500 mt-3">
+                Link your repos to attach code as proof of work
+              </p>
+            </div>
           </div>
 
           {/* Main Content */}
@@ -373,7 +422,18 @@ const Dashboard = ({ user, onLogout }) => {
 
                     {/* Recent Sessions */}
                     <div className="bg-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-shadow duration-300 border border-gray-100">
-                      <h3 className="text-xl font-bold text-gray-900 mb-4">Recent Sessions</h3>
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-xl font-bold text-gray-900">Recent Sessions</h3>
+                        {sessions.length > 0 && (
+                          <button
+                            onClick={() => setActiveView('timeline')}
+                            className="flex items-center text-sm text-primary-600 hover:text-primary-700 font-medium transition-colors"
+                          >
+                            View All
+                            <ChevronRight className="w-4 h-4 ml-1" />
+                          </button>
+                        )}
+                      </div>
                       {sessions.length === 0 ? (
                         <div className="text-center py-12">
                           <FileText className="w-12 h-12 text-gray-300 mx-auto mb-3" />
@@ -392,19 +452,20 @@ const Dashboard = ({ user, onLogout }) => {
                             .sort((a, b) => new Date(b.clientTs) - new Date(a.clientTs))
                             .slice(0, 5)
                             .map(session => (
-                            <motion.div
+                            <motion.button
                               key={session.id}
                               initial={{ opacity: 0, y: 10 }}
                               animate={{ opacity: 1, y: 0 }}
-                              className="border border-gray-200 rounded-lg p-4 hover:shadow-lg transition-all bg-white shadow-sm"
+                              onClick={() => setSelectedSession(session)}
+                              className="w-full text-left border border-gray-200 rounded-lg p-4 hover:shadow-lg hover:border-primary-300 transition-all bg-white shadow-sm group"
                             >
-                              <div className="flex items-start justify-between">
-                                <div className="flex-1">
-                                  <div className="flex items-center space-x-2 mb-2">
+                              <div className="flex items-center justify-between">
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center space-x-2 mb-1">
                                     <div className={`w-2 h-2 rounded-full ${getPhaseColor(session.phase)}`} />
-                                    <h4 className="font-semibold text-gray-900">{session.topic}</h4>
+                                    <h4 className="font-semibold text-gray-900 truncate">{session.topic}</h4>
                                     {session.difficulty && (
-                                      <span className={`text-xs px-2 py-0.5 rounded-full ${
+                                      <span className={`text-xs px-2 py-0.5 rounded-full flex-shrink-0 ${
                                         session.difficulty === 'easy' ? 'bg-green-100 text-green-700' :
                                         session.difficulty === 'medium' ? 'bg-yellow-100 text-yellow-700' :
                                         session.difficulty === 'hard' ? 'bg-orange-100 text-orange-700' :
@@ -414,20 +475,28 @@ const Dashboard = ({ user, onLogout }) => {
                                       </span>
                                     )}
                                   </div>
-                                  <p className="text-sm text-gray-600 mb-2 line-clamp-2">{session.notes}</p>
-                                  <div className="flex items-center space-x-4 text-xs text-gray-500">
+                                  {session.notes && (
+                                    <p className="text-sm text-gray-600 mb-2 line-clamp-2">
+                                      {session.notes.length > 100 ? `${session.notes.substring(0, 100)}...` : session.notes}
+                                    </p>
+                                  )}
+                                  <div className="flex items-center space-x-3 text-xs text-gray-500">
                                     <span className="flex items-center">
                                       <Clock className="w-3 h-3 mr-1" />
                                       {formatDuration(session.durationSeconds)}
                                     </span>
-                                    <span>•</span>
                                     <span>{formatDate(session.clientTs)}</span>
-                                    <span>•</span>
-                                    <span className="font-mono">{session.entryHash.substring(0, 12)}...</span>
+                                    {session.proofOfWork && session.proofOfWork.length > 0 && (
+                                      <span className="flex items-center text-primary-600">
+                                        <Paperclip className="w-3 h-3 mr-1" />
+                                        {session.proofOfWork.length} files
+                                      </span>
+                                    )}
                                   </div>
                                 </div>
+                                <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-primary-600 flex-shrink-0 transition-colors" />
                               </div>
-                            </motion.div>
+                            </motion.button>
                           ))}
                         </div>
                       )}
@@ -463,6 +532,7 @@ const Dashboard = ({ user, onLogout }) => {
           onSubmit={handleCreateSession}
           skills={skills}
           selectedSkillId={selectedSkill?.id}
+          githubConnection={githubConnection}
         />
       )}
 
@@ -472,6 +542,23 @@ const Dashboard = ({ user, onLogout }) => {
           isOpen={showAddSkill}
           onClose={() => setShowAddSkill(false)}
           onAdd={handleAddSkill}
+        />
+      )}
+
+      {/* GitHub Connect Modal */}
+      {showGitHubConnect && (
+        <GitHubConnect
+          onClose={() => setShowGitHubConnect(false)}
+          onConnect={handleGitHubConnect}
+          existingConnection={githubConnection}
+        />
+      )}
+
+      {/* Session Detail Modal */}
+      {selectedSession && (
+        <SessionDetail
+          session={selectedSession}
+          onClose={() => setSelectedSession(null)}
         />
       )}
     </div>
