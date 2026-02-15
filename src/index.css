@@ -4,51 +4,56 @@
 
 @layer base {
   body {
-    @apply bg-neutral-50 text-gray-900 antialiased;
+    @apply bg-neutral-50 text-neutral-900 antialiased;
   }
   
-  /* Custom Scrollbar */
+  /* Custom Scrollbar - Premium Style */
+  .custom-scrollbar::-webkit-scrollbar,
   ::-webkit-scrollbar {
-    width: 12px;
+    width: 8px;
+    height: 8px;
   }
   
+  .custom-scrollbar::-webkit-scrollbar-track,
   ::-webkit-scrollbar-track {
-    background: #faf9f6;
-    border-left: 1px solid #e8e3d8;
+    background: #f5f5f5;
+    border-radius: 10px;
   }
   
+  .custom-scrollbar::-webkit-scrollbar-thumb,
   ::-webkit-scrollbar-thumb {
-    background: linear-gradient(180deg, #208091 0%, #19586c 100%);
-    border-radius: 6px;
-    border: 2px solid #faf9f6;
+    background: linear-gradient(180deg, #6366f1 0%, #a21caf 100%);
+    border-radius: 10px;
+    border: 2px solid #f5f5f5;
   }
   
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover,
   ::-webkit-scrollbar-thumb:hover {
-    background: linear-gradient(180deg, #1a7084 0%, #1a4859 100%);
+    background: linear-gradient(180deg, #4f46e5 0%, #86198f 100%);
   }
   
   /* Firefox */
   * {
     scrollbar-width: thin;
-    scrollbar-color: #208091 #faf9f6;
+    scrollbar-color: #6366f1 #f5f5f5;
   }
 }
 
 @layer components {
   .btn {
-    @apply px-6 py-3 rounded-lg font-medium transition-all duration-200 inline-flex items-center justify-center gap-2;
+    @apply px-6 py-3 rounded-xl font-semibold transition-all duration-200 inline-flex items-center justify-center gap-2;
   }
   
   .btn-primary {
-    @apply bg-primary-500 text-white hover:bg-primary-600 hover:shadow-lg hover:shadow-primary-500/30;
+    @apply bg-gradient-to-r from-primary-600 to-accent-600 text-white hover:from-primary-700 hover:to-accent-700 hover:shadow-xl shadow-lg relative overflow-hidden;
   }
   
   .btn-secondary {
-    @apply bg-white text-primary-500 border-2 border-primary-500 hover:bg-primary-50;
+    @apply bg-white text-primary-600 border-2 border-primary-300 hover:bg-primary-50 hover:border-primary-500 shadow-md hover:shadow-lg;
   }
   
   .btn-outline {
-    @apply bg-transparent text-gray-700 border-2 border-gray-300 hover:bg-gray-50;
+    @apply bg-transparent text-neutral-700 border-2 border-neutral-300 hover:bg-neutral-50 hover:border-neutral-400;
   }
   
   .section-padding {
@@ -60,40 +65,40 @@
   }
   
   .gradient-text {
-    @apply bg-gradient-to-r from-primary-500 to-primary-700 bg-clip-text text-transparent;
+    @apply bg-gradient-to-r from-primary-600 to-accent-600 bg-clip-text text-transparent;
   }
 
-  /* Glass Card Effect - For Modals and Popup Cards */
+  /* Glass Card Effect */
   .glass-card {
-    @apply bg-white/95 backdrop-blur-xl shadow-2xl border border-white/20;
+    @apply bg-white/95 backdrop-blur-xl shadow-2xl border border-white/20 rounded-2xl;
   }
 
-  /* Enhanced Card Shadows for Dashboard Components */
+  /* Enhanced Card Shadows */
   .card-shadow {
-    @apply shadow-lg hover:shadow-xl transition-shadow duration-300;
+    @apply shadow-lg hover:shadow-2xl transition-all duration-300;
   }
 
   .card-shadow-sm {
-    @apply shadow-md hover:shadow-lg transition-shadow duration-300;
+    @apply shadow-md hover:shadow-lg transition-all duration-300;
   }
 
   .card-shadow-strong {
-    @apply shadow-xl hover:shadow-2xl transition-shadow duration-300;
+    @apply shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-[1.02];
   }
 
-  /* Modal/Popup specific backgrounds */
+  /* Modal/Popup backgrounds */
   .modal-card {
-    @apply bg-white shadow-2xl border border-gray-100;
+    @apply bg-white shadow-2xl border border-primary-100 rounded-3xl;
   }
 
   /* Dashboard card with depth */
   .dashboard-card {
-    @apply bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100;
+    @apply bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 border border-neutral-100;
   }
 
   /* Stats card with gradient shadow */
   .stats-card {
-    @apply bg-white rounded-xl shadow-md hover:shadow-lg transition-all duration-300 border border-gray-100;
+    @apply bg-white rounded-xl shadow-md hover:shadow-lg transition-all duration-300 border border-neutral-100 hover:scale-105;
   }
 }
 
