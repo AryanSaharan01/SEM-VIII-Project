@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { 
   Shield, Plus, LogOut, TrendingUp, Clock, 
-  Calendar, Share2, BarChart3, FileText, Eye, Github, ChevronRight, Paperclip
+  Calendar, Share2, BarChart3, FileText, Eye, Github, ChevronRight, Paperclip, Zap, Code
 } from 'lucide-react'
 import { getSkills, getSessions, createSession, getScoreBreakdown, getActivityHeatmap, addSkill } from '../services/api'
 import { formatDuration, formatDate, getScoreLabel, getPhaseColor } from '../utils/helpers'
@@ -198,28 +198,35 @@ const Dashboard = ({ user, onLogout }) => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-gray-50 to-primary-50/30">
+    <div className="min-h-screen bg-gray-50">
       {/* Top Navigation */}
-      <nav className="bg-white border-b border-gray-200 sticky top-0 z-40 shadow-md">
+      <nav className="bg-white border-b border-gray-200 sticky top-0 z-40 shadow-sm">
         <div className="container mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <Shield className="w-8 h-8 text-primary-600" />
-              <span className="text-2xl font-bold text-gray-900">Skill Ledger</span>
+              <div className="w-10 h-10 bg-primary-600 rounded-lg flex items-center justify-center shadow-md">
+                <Shield className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <span className="text-xl font-bold text-gray-900">Skill Ledger</span>
+                <p className="text-xs text-gray-500">Decentralized Time Capsule System</p>
+              </div>
             </div>
 
             <div className="flex items-center space-x-4">
-              <div className="text-right mr-4">
+              <div className="text-right mr-4 hidden md:block">
                 <div className="text-sm font-semibold text-gray-900">{user?.displayName || 'User'}</div>
                 <div className="text-xs text-gray-500">{user?.email || ''}</div>
               </div>
-              <button
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={onLogout}
-                className="flex items-center space-x-2 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                className="flex items-center space-x-2 px-4 py-2 text-gray-700 hover:bg-red-50 hover:text-red-600 rounded-lg transition-all border border-transparent hover:border-red-200"
               >
                 <LogOut className="w-5 h-5" />
-                <span>Logout</span>
-              </button>
+                <span className="hidden sm:inline">Logout</span>
+              </motion.button>
             </div>
           </div>
         </div>
@@ -230,32 +237,36 @@ const Dashboard = ({ user, onLogout }) => {
           {/* Sidebar */}
           <div className="lg:col-span-1 space-y-6">
             {/* Skills List */}
-            <div className="bg-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-shadow duration-300 border border-gray-100">
-              <div className="flex items-center justify-between mb-6">
+            <div className="bg-white rounded-lg p-5 shadow-md border border-gray-200">
+              <div className="flex items-center justify-between mb-5">
                 <h2 className="text-lg font-bold text-gray-900">My Skills</h2>
-                <button 
+                <motion.button 
                   onClick={() => setShowAddSkill(true)}
-                  className="w-8 h-8 bg-primary-600 hover:bg-primary-700 text-white rounded-lg flex items-center justify-center transition-colors shadow-md hover:shadow-lg"
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  className="w-9 h-9 bg-primary-600 hover:bg-primary-700 text-white rounded-lg flex items-center justify-center transition-colors shadow-md"
                   title="Add New Skill"
                 >
                   <Plus className="w-5 h-5" />
-                </button>
+                </motion.button>
               </div>
 
               {skills.length === 0 ? (
-                <div className="text-center py-8">
+                <div className="text-center py-10">
+                  <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center mx-auto mb-3">
+                    <Plus className="w-8 h-8 text-gray-400" />
+                  </div>
                   <p className="text-gray-500 text-sm mb-4">No skills yet</p>
                   <button
                     onClick={() => setShowAddSkill(true)}
-                    className="btn-primary text-sm"
+                    className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm font-medium"
                   >
-                    <Plus className="w-4 h-4 inline mr-2" />
                     Add Your First Skill
                   </button>
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {skills.map(skill => (
+                  {skills.map((skill, index) => (
                     <SkillCard
                       key={skill.id}
                       skill={skill}
@@ -268,34 +279,37 @@ const Dashboard = ({ user, onLogout }) => {
             </div>
 
             {/* Quick Actions */}
-            <div className="bg-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-shadow duration-300 border border-gray-100">
-              <h3 className="text-sm font-semibold text-gray-700 mb-4">Quick Actions</h3>
+            <div className="bg-white rounded-lg p-5 shadow-md border border-gray-200">
+              <h3 className="text-sm font-bold text-gray-700 mb-4">Quick Actions</h3>
               <div className="space-y-2">
                 <button
                   onClick={() => setShowSessionLogger(true)}
-                  className="w-full btn-primary text-sm py-2 shadow-md hover:shadow-lg"
+                  className="w-full bg-primary-600 text-white rounded-lg py-2.5 px-4 font-medium text-sm hover:bg-primary-700 transition-colors flex items-center justify-center space-x-2"
                 >
-                  <Plus className="w-4 h-4 inline mr-2" />
-                  Log Session
+                  <Plus className="w-4 h-4" />
+                  <span>Log Session</span>
                 </button>
-                <button className="w-full btn-secondary text-sm py-2 shadow-sm hover:shadow-md">
-                  <Share2 className="w-4 h-4 inline mr-2" />
-                  Share Capsule
+                <button className="w-full bg-white border-2 border-gray-200 text-gray-700 rounded-lg py-2.5 px-4 font-medium text-sm hover:border-gray-300 hover:bg-gray-50 transition-all flex items-center justify-center space-x-2">
+                  <Share2 className="w-4 h-4" />
+                  <span>Share Capsule</span>
                 </button>
               </div>
             </div>
 
             {/* GitHub Integration */}
-            <div className="bg-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-shadow duration-300 border border-gray-100">
-              <h3 className="text-sm font-semibold text-gray-700 mb-4">GitHub Integration</h3>
+            <div className="bg-gray-900 rounded-lg p-5 shadow-md text-white">
+              <h3 className="text-sm font-bold mb-4 flex items-center">
+                <Github className="w-4 h-4 mr-2" />
+                GitHub Integration
+              </h3>
               {connectedRepos.length > 0 ? (
                 <div className="space-y-3">
-                  <div className="text-sm text-green-700 bg-green-50 p-3 rounded-lg">
+                  <div className="bg-emerald-500/20 border border-emerald-500/50 p-3 rounded-lg">
                     <div className="flex items-center space-x-2 mb-2">
                       <Github className="w-4 h-4" />
-                      <span className="font-medium">{connectedRepos.length} repos connected</span>
+                      <span className="font-semibold text-sm">{connectedRepos.length} repos connected</span>
                     </div>
-                    <div className="text-xs text-green-600 space-y-1">
+                    <div className="text-xs space-y-1 max-h-24 overflow-y-auto custom-scrollbar">
                       {connectedRepos.slice(0, 3).map(repo => (
                         <div key={repo.id} className="truncate">• {repo.name}</div>
                       ))}
@@ -306,48 +320,66 @@ const Dashboard = ({ user, onLogout }) => {
                   </div>
                   <button
                     onClick={() => setShowGitHubConnect(true)}
-                    className="w-full text-sm py-2 text-gray-600 hover:text-gray-900 transition-colors"
+                    className="w-full text-sm py-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors"
                   >
                     Manage Repositories
                   </button>
                 </div>
               ) : (
-                <button
-                  onClick={() => setShowGitHubConnect(true)}
-                  className="w-full flex items-center justify-center space-x-2 bg-gray-900 text-white py-2.5 rounded-lg hover:bg-gray-800 transition-colors text-sm shadow-md hover:shadow-lg"
-                >
-                  <Github className="w-4 h-4" />
-                  <span>Connect GitHub</span>
-                </button>
+                <div>
+                  <button
+                    onClick={() => setShowGitHubConnect(true)}
+                    className="w-full flex items-center justify-center space-x-2 bg-white text-gray-900 py-2.5 rounded-lg hover:bg-gray-100 transition-colors text-sm font-semibold"
+                  >
+                    <Github className="w-4 h-4" />
+                    <span>Connect GitHub</span>
+                  </button>
+                  <p className="text-xs text-gray-400 mt-3 text-center">
+                    Link repos to attach code as proof of work
+                  </p>
+                </div>
               )}
-              <p className="text-xs text-gray-500 mt-3">
-                Link repos to attach code as proof of work
-              </p>
             </div>
           </div>
 
           {/* Main Content */}
-          <div className="lg:col-span-3 space-y-6">
+          <div className="lg:col-span-3 space-y-5">
             {selectedSkill && (
               <>
                 {/* Skill Header */}
-                <div className="bg-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-shadow duration-300 border border-gray-100">
-                  <div className="flex items-start justify-between mb-4">
-                    <div>
-                      <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                        {selectedSkill.name}
-                      </h1>
-                      <div className="flex items-center space-x-4 text-sm text-gray-600">
-                        <span className="flex items-center">
-                          <Calendar className="w-4 h-4 mr-1" />
+                <div className="bg-white rounded-lg p-6 shadow-md border border-gray-200">
+                  <div className="flex items-start justify-between mb-6">
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-3 mb-3">
+                        <div className={`w-14 h-14 rounded-lg flex items-center justify-center ${
+                          selectedSkill.category === 'coding'
+                            ? 'bg-primary-600'
+                            : 'bg-emerald-600'
+                        }`}>
+                          {selectedSkill.category === 'coding' ? (
+                            <Code className="w-7 h-7 text-white" />
+                          ) : (
+                            <FileText className="w-7 h-7 text-white" />
+                          )}
+                        </div>
+                        <div>
+                          <h1 className="text-3xl font-bold text-gray-900">
+                            {selectedSkill.name}
+                          </h1>
+                          <p className="text-sm text-gray-600 font-medium capitalize mt-1">{selectedSkill.category} Skill</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-4 text-sm text-gray-600 font-medium">
+                        <span className="flex items-center bg-gray-50 rounded-lg px-3 py-2 border border-gray-200">
+                          <Calendar className="w-4 h-4 mr-2 text-primary-600" />
                           Started {formatDate(selectedSkill.createdAt)}
                         </span>
-                        <span className="flex items-center">
-                          <FileText className="w-4 h-4 mr-1" />
+                        <span className="flex items-center bg-gray-50 rounded-lg px-3 py-2 border border-gray-200">
+                          <FileText className="w-4 h-4 mr-2 text-accent-600" />
                           {selectedSkill.totalSessions} sessions
                         </span>
-                        <span className="flex items-center">
-                          <Clock className="w-4 h-4 mr-1" />
+                        <span className="flex items-center bg-gray-50 rounded-lg px-3 py-2 border border-gray-200">
+                          <Clock className="w-4 h-4 mr-2 text-emerald-600" />
                           {selectedSkill.totalHours}h logged
                         </span>
                       </div>
@@ -357,9 +389,9 @@ const Dashboard = ({ user, onLogout }) => {
                       {(() => {
                         const { label, color, bg } = getScoreLabel(selectedSkill.score)
                         return (
-                          <div className={`${bg} ${color} px-4 py-2 rounded-lg`}>
-                            <div className="text-3xl font-bold">{selectedSkill.score}</div>
-                            <div className="text-xs font-semibold">{label}</div>
+                          <div className={`${bg} ${color} px-6 py-4 rounded-lg border-2 border-current/20`}>
+                            <div className="text-4xl font-bold mb-1">{selectedSkill.score}</div>
+                            <div className="text-xs font-bold uppercase tracking-wider">{label}</div>
                           </div>
                         )
                       })()}
@@ -367,7 +399,7 @@ const Dashboard = ({ user, onLogout }) => {
                   </div>
 
                   {/* View Tabs */}
-                  <div className="flex space-x-2 border-t pt-4">
+                  <div className="flex flex-wrap gap-2 border-t border-gray-200 pt-5">
                     {[
                       { id: 'overview', label: 'Overview', icon: Eye },
                       { id: 'timeline', label: 'Timeline', icon: TrendingUp },
@@ -378,14 +410,14 @@ const Dashboard = ({ user, onLogout }) => {
                       <button
                         key={tab.id}
                         onClick={() => setActiveView(tab.id)}
-                        className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-all ${
+                        className={`flex items-center space-x-2 px-4 py-2.5 rounded-lg font-semibold transition-all ${
                           activeView === tab.id
-                            ? 'bg-primary-600 text-white'
-                            : 'text-gray-600 hover:bg-gray-100'
+                            ? 'bg-primary-600 text-white shadow-md'
+                            : 'text-gray-600 hover:bg-gray-100 bg-white border border-gray-200 hover:border-gray-300'
                         }`}
                       >
                         <tab.icon className="w-4 h-4" />
-                        <span>{tab.label}</span>
+                        <span className="text-sm">{tab.label}</span>
                       </button>
                     ))}
                   </div>
@@ -393,51 +425,60 @@ const Dashboard = ({ user, onLogout }) => {
 
                 {/* Dynamic Content based on activeView */}
                 {activeView === 'overview' && (
-                  <div className="space-y-6">
+                  <div className="space-y-5">
                     {/* Stats Grid */}
                     <div className="grid md:grid-cols-3 gap-4">
-                      <div className="bg-white rounded-xl p-6 shadow-md hover:shadow-lg transition-all duration-300 border border-gray-100 hover:scale-105">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-gray-600 text-sm">Consistency</span>
-                          <TrendingUp className="w-5 h-5 text-green-600" />
+                      <div className="bg-emerald-600 rounded-lg p-5 shadow-md text-white">
+                        <div className="flex items-center justify-between mb-3">
+                          <span className="text-emerald-100 text-sm font-semibold">Consistency</span>
+                          <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+                            <TrendingUp className="w-5 h-5" />
+                          </div>
                         </div>
-                        <div className="text-3xl font-bold text-gray-900 mb-1">
+                        <div className="text-3xl font-bold mb-1">
                           {selectedSkill.consistencyScore}%
                         </div>
-                        <div className="text-xs text-gray-500">Last 30 days</div>
+                        <div className="text-xs text-emerald-100 font-medium">Last 30 days</div>
                       </div>
 
-                      <div className="bg-white rounded-xl p-6 shadow-md hover:shadow-lg transition-all duration-300 border border-gray-100 hover:scale-105">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-gray-600 text-sm">Total Sessions</span>
-                          <FileText className="w-5 h-5 text-blue-600" />
+                      <div className="bg-primary-600 rounded-lg p-5 shadow-md text-white">
+                        <div className="flex items-center justify-between mb-3">
+                          <span className="text-primary-100 text-sm font-semibold">Total Sessions</span>
+                          <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+                            <FileText className="w-5 h-5" />
+                          </div>
                         </div>
-                        <div className="text-3xl font-bold text-gray-900 mb-1">
+                        <div className="text-3xl font-bold mb-1">
                           {selectedSkill.totalSessions}
                         </div>
-                        <div className="text-xs text-gray-500">All time</div>
+                        <div className="text-xs text-primary-100 font-medium">All time</div>
                       </div>
 
-                      <div className="bg-white rounded-xl p-6 shadow-md hover:shadow-lg transition-all duration-300 border border-gray-100 hover:scale-105">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-gray-600 text-sm">Time Invested</span>
-                          <Clock className="w-5 h-5 text-purple-600" />
+                      <div className="bg-accent-600 rounded-lg p-5 shadow-md text-white">
+                        <div className="flex items-center justify-between mb-3">
+                          <span className="text-accent-100 text-sm font-semibold">Total Hours</span>
+                          <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+                            <Clock className="w-5 h-5" />
+                          </div>
                         </div>
-                        <div className="text-3xl font-bold text-gray-900 mb-1">
-                          {selectedSkill.totalHours}h
+                        <div className="text-3xl font-bold mb-1">
+                          {selectedSkill.totalHours}
                         </div>
-                        <div className="text-xs text-gray-500">Cumulative</div>
+                        <div className="text-xs text-accent-100 font-medium">Logged</div>
                       </div>
                     </div>
 
                     {/* Recent Sessions */}
-                    <div className="bg-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-shadow duration-300 border border-gray-100">
-                      <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-xl font-bold text-gray-900">Recent Sessions</h3>
+                    <div className="bg-white rounded-lg p-6 shadow-md border border-gray-200">
+                      <div className="flex items-center justify-between mb-5">
+                        <h3 className="text-lg font-bold text-gray-900 flex items-center">
+                          <div className="w-1 h-6 bg-primary-600 rounded-full mr-3"></div>
+                          Recent Sessions
+                        </h3>
                         {sessions.length > 0 && (
                           <button
                             onClick={() => setActiveView('timeline')}
-                            className="flex items-center text-sm text-primary-600 hover:text-primary-700 font-medium transition-colors"
+                            className="flex items-center text-sm text-primary-600 hover:text-primary-700 font-semibold transition-colors bg-primary-50 px-3 py-2 rounded-lg"
                           >
                             View All
                             <ChevronRight className="w-4 h-4 ml-1" />
@@ -446,14 +487,16 @@ const Dashboard = ({ user, onLogout }) => {
                       </div>
                       {sessions.length === 0 ? (
                         <div className="text-center py-12">
-                          <FileText className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                          <p className="text-gray-500 mb-4">No sessions logged yet</p>
+                          <div className="w-16 h-16 bg-primary-100 rounded-lg flex items-center justify-center mx-auto mb-3">
+                            <FileText className="w-8 h-8 text-primary-600" />
+                          </div>
+                          <p className="text-gray-500 mb-5 font-medium">No sessions logged yet</p>
                           <button
                             onClick={() => setShowSessionLogger(true)}
-                            className="btn-primary text-sm"
+                            className="px-4 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-semibold flex items-center space-x-2 mx-auto"
                           >
-                            <Plus className="w-4 h-4 inline mr-2" />
-                            Log Your First Session
+                            <Plus className="w-4 h-4" />
+                            <span>Log Your First Session</span>
                           </button>
                         </div>
                       ) : (
@@ -461,25 +504,23 @@ const Dashboard = ({ user, onLogout }) => {
                           {sessions
                             .sort((a, b) => new Date(b.clientTs) - new Date(a.clientTs))
                             .slice(0, 5)
-                            .map(session => (
-                            <motion.button
+                            .map((session, index) => (
+                            <button
                               key={session.id}
-                              initial={{ opacity: 0, y: 10 }}
-                              animate={{ opacity: 1, y: 0 }}
                               onClick={() => setSelectedSession(session)}
-                              className="w-full text-left border border-gray-200 rounded-lg p-4 hover:shadow-lg hover:border-primary-300 transition-all bg-white shadow-sm group"
+                              className="w-full text-left border border-gray-200 rounded-lg p-4 hover:shadow-md hover:border-primary-300 transition-all bg-gray-50 hover:bg-gray-100 group"
                             >
                               <div className="flex items-center justify-between">
                                 <div className="flex-1 min-w-0">
-                                  <div className="flex items-center space-x-2 mb-1">
-                                    <div className={`w-2 h-2 rounded-full ${getPhaseColor(session.phase)}`} />
+                                  <div className="flex items-center space-x-3 mb-2">
+                                    <div className={`w-3 h-3 rounded-full ${getPhaseColor(session.phase)}`} />
                                     <h4 className="font-semibold text-gray-900 truncate">{session.topic}</h4>
                                     {session.difficulty && (
-                                      <span className={`text-xs px-2 py-0.5 rounded-full flex-shrink-0 ${
-                                        session.difficulty === 'easy' ? 'bg-green-100 text-green-700' :
-                                        session.difficulty === 'medium' ? 'bg-yellow-100 text-yellow-700' :
-                                        session.difficulty === 'hard' ? 'bg-orange-100 text-orange-700' :
-                                        'bg-red-100 text-red-700'
+                                      <span className={`text-xs px-2 py-1 rounded-full flex-shrink-0 font-medium ${
+                                        session.difficulty === 'easy' ? 'bg-emerald-100 text-emerald-700' :
+                                        session.difficulty === 'medium' ? 'bg-orange-100 text-orange-700' :
+                                        session.difficulty === 'hard' ? 'bg-red-100 text-red-700' :
+                                        'bg-accent-100 text-accent-700'
                                       }`}>
                                         {session.difficulty}
                                       </span>
@@ -490,23 +531,23 @@ const Dashboard = ({ user, onLogout }) => {
                                       {session.notes.length > 100 ? `${session.notes.substring(0, 100)}...` : session.notes}
                                     </p>
                                   )}
-                                  <div className="flex items-center space-x-3 text-xs text-gray-500">
-                                    <span className="flex items-center">
-                                      <Clock className="w-3 h-3 mr-1" />
+                                  <div className="flex items-center space-x-3 text-xs font-medium">
+                                    <span className="flex items-center text-gray-600">
+                                      <Clock className="w-3.5 h-3.5 mr-1.5 text-primary-600" />
                                       {formatDuration(session.durationSeconds)}
                                     </span>
-                                    <span>{formatDate(session.clientTs)}</span>
+                                    <span className="text-gray-500">{formatDate(session.clientTs)}</span>
                                     {session.proofOfWork && session.proofOfWork.length > 0 && (
                                       <span className="flex items-center text-primary-600">
-                                        <Paperclip className="w-3 h-3 mr-1" />
+                                        <Paperclip className="w-3.5 h-3.5 mr-1.5" />
                                         {session.proofOfWork.length} files
                                       </span>
                                     )}
                                   </div>
                                 </div>
-                                <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-primary-600 flex-shrink-0 transition-colors" />
+                                <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-primary-600 flex-shrink-0 transition-colors ml-4" />
                               </div>
-                            </motion.button>
+                            </button>
                           ))}
                         </div>
                       )}
