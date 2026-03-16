@@ -96,6 +96,9 @@ CREATE TABLE IF NOT EXISTS capsule_tokens (
   expires_at   TIMESTAMPTZ NOT NULL,
   view_count   INTEGER DEFAULT 0,
   is_active    BOOLEAN DEFAULT TRUE,
+  total_sessions_snapshot INTEGER DEFAULT 0,   -- sessions at time of generation
+  total_hours_snapshot    NUMERIC(8,2) DEFAULT 0,
+  score_snapshot          INTEGER DEFAULT 0,
   created_at   TIMESTAMPTZ DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_capsule_token ON capsule_tokens(token);
@@ -137,6 +140,7 @@ CREATE TABLE IF NOT EXISTS github_connections (
   github_login  TEXT NOT NULL,
   access_token  TEXT NOT NULL,
   repos         JSONB DEFAULT '[]',               -- cached repo list
+  selected_repos JSONB DEFAULT '[]',              -- user-selected repos for skills
   connected_at  TIMESTAMPTZ DEFAULT NOW(),
   updated_at    TIMESTAMPTZ DEFAULT NOW()
 );

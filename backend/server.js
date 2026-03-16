@@ -19,11 +19,25 @@ app.use(compression());
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 
 // CORS
+const allowedOrigins = [
+  'http://localhost:5173',
+  'https://skillledger.vercel.app',
+  process.env.APP_URL,
+].filter(Boolean);
+
 app.use(cors({
-  origin: [process.env.APP_URL || 'http://localhost:5173'],
+  origin: (origin, callback) => {
+    // Allow requests with no origin (e.g. mobile apps, curl, server-to-server)
+    if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+    callback(new Error(`CORS: origin ${origin} not allowed`));
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
 }));
+
+// Handle preflight for all routes (Express 5 compatible)
+app.options(/(.*)/, cors());
 
 // Body parsing
 app.use(express.json({ limit: '10mb' }));
