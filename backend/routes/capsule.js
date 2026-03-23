@@ -23,10 +23,15 @@ router.post('/generate', authenticate, async (req, res, next) => {
     const token = generateCapsuleToken();
     const expiresAt = new Date(Date.now() + EXPIRY_DAYS * 24 * 60 * 60 * 1000);
 
+    // Snapshot current stats at time of generation
+    const totalSessions = skillRows[0].total_sessions || 0;
+    const totalHours = skillRows[0].total_hours || 0;
+    const score = skillRows[0].score || 0;
+
     const { rows } = await query(
-      `INSERT INTO capsule_tokens (skill_id, user_id, token, expires_at)
-       VALUES ($1, $2, $3, $4) RETURNING *`,
-      [skillId, req.user.id, token, expiresAt]
+      `INSERT INTO capsule_tokens (skill_id, user_id, token, expires_at, total_sessions_snapshot, total_hours_snapshot, score_snapshot)
+       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+      [skillId, req.user.id, token, expiresAt, totalSessions, totalHours, score]
     );
 
     success(res, {
@@ -34,6 +39,36 @@ router.post('/generate', authenticate, async (req, res, next) => {
       url: `${process.env.APP_URL}/capsule/${token}`,
       expiresAt: rows[0].expires_at,
     });
+  } catch (err) { next(err); }
+});
+
+// GET /api/capsule/history/:skillId — list previous capsule links for a skill
+router.get('/history/:skillId', authenticate, async (req, res, next) => {
+  try {
+    const { rows } = await query(
+      `SELECT id, token, expires_at, view_count, is_active, 
+              total_sessions_snapshot, total_hours_snapshot, score_snapshot, created_at
+       FROM capsule_tokens
+       WHERE skill_id = $1 AND user_id = $2
+       ORDER BY created_at DESC`,
+      [req.params.skillId, req.user.id]
+    );
+
+    const history = rows.map(r => ({
+      id: r.id,
+      token: r.token,
+      url: `${process.env.APP_URL}/capsule/${r.token}`,
+      expiresAt: r.expires_at,
+      viewCount: r.view_count,
+      isActive: r.is_active,
+      isExpired: new Date(r.expires_at) < new Date(),
+      totalSessionsSnapshot: r.total_sessions_snapshot,
+      totalHoursSnapshot: parseFloat(r.total_hours_snapshot) || 0,
+      scoreSnapshot: r.score_snapshot,
+      createdAt: r.created_at,
+    }));
+
+    success(res, { history });
   } catch (err) { next(err); }
 });
 
