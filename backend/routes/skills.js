@@ -40,7 +40,7 @@ router.post('/',
         `INSERT INTO skills (user_id, name, category, linked_repo_id, linked_repo_name)
          VALUES ($1, $2, $3, $4, $5)
          RETURNING *`,
-        [req.user.id, name.trim(), category, linkedRepo?.id || null, linkedRepo?.name || null]
+        [req.user.id, name.trim(), category, linkedRepo?.full_name || null, linkedRepo?.name || null]
       );
       success(res, { skill: rows[0] }, 'Skill created', 201);
     } catch (err) { next(err); }
@@ -66,19 +66,55 @@ router.patch('/:id', authenticate, async (req, res, next) => {
          linked_repo_id = COALESCE($2, linked_repo_id),
          linked_repo_name = COALESCE($3, linked_repo_name)
        WHERE id = $4 AND user_id = $5 RETURNING *`,
-      [name, linkedRepo?.id, linkedRepo?.name, req.params.id, req.user.id]
+      [name, linkedRepo?.full_name, linkedRepo?.name, req.params.id, req.user.id]
     );
     if (!rows[0]) throw new NotFoundError('Skill');
     success(res, { skill: rows[0] });
   } catch (err) { next(err); }
 });
 
-// DELETE /api/skills/:id
+// DELETE /api/skills/:id  — only allowed if skill has zero sessions
 router.delete('/:id', authenticate, async (req, res, next) => {
   try {
-    const { rowCount } = await query('DELETE FROM skills WHERE id = $1 AND user_id = $2', [req.params.id, req.user.id]);
-    if (!rowCount) throw new NotFoundError('Skill');
+    // Verify ownership first
+    const { rows } = await query(
+      'SELECT id FROM skills WHERE id = $1 AND user_id = $2',
+      [req.params.id, req.user.id]
+    );
+    if (!rows[0]) throw new NotFoundError('Skill');
+
+    // Block deletion if any sessions exist
+    const { rows: sessionRows } = await query(
+      'SELECT COUNT(*) AS cnt FROM sessions WHERE skill_id = $1',
+      [req.params.id]
+    );
+    if (parseInt(sessionRows[0].cnt) > 0) {
+      return next(new ForbiddenError('Cannot delete a skill that has logged sessions. Delete all sessions first.'));
+    }
+
+    await query('DELETE FROM skills WHERE id = $1 AND user_id = $2', [req.params.id, req.user.id]);
     success(res, {}, 'Skill deleted');
+  } catch (err) { next(err); }
+});
+
+// GET /api/skills/:id/repo-usage — check if a repo has files linked to sessions
+router.get('/:id/repo-usage', authenticate, async (req, res, next) => {
+  try {
+    const repoFullName = req.query.repo;
+    if (!repoFullName) {
+      return success(res, { hasLinkedSessions: false, count: 0 });
+    }
+
+    // Check if any proof_of_work entries for this skill reference the repo
+    const { rows } = await query(
+      `SELECT COUNT(*) AS cnt FROM proof_of_work p
+       JOIN sessions s ON s.id = p.session_id
+       WHERE s.skill_id = $1 AND s.user_id = $2 AND p.repo_name = $3`,
+      [req.params.id, req.user.id, repoFullName]
+    );
+    
+    const count = parseInt(rows[0].cnt);
+    success(res, { hasLinkedSessions: count > 0, count });
   } catch (err) { next(err); }
 });
 
