@@ -3,7 +3,7 @@ const axios = require('axios');
 const { query } = require('../config/db');
 const { success } = require('../utils/response');
 const { authenticate } = require('../middleware/auth');
-const { NotFoundError, AppError } = require('../utils/errors');
+const { NotFoundError, AppError, ForbiddenError } = require('../utils/errors');
 const rateLimit = require('express-rate-limit');
 
 const githubLimiter = rateLimit({ windowMs: 60 * 1000, max: 30 });
@@ -22,18 +22,22 @@ const githubAPI = (token) => axios.create({
   headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json' },
 });
 
-// GET /api/github/status — check connection
+// GET /api/github/status — check connection + return selected repos
 router.get('/status', authenticate, async (req, res, next) => {
   try {
     const { rows } = await query(
-      'SELECT github_login, connected_at FROM github_connections WHERE user_id = $1',
+      'SELECT github_login, connected_at, selected_repos FROM github_connections WHERE user_id = $1',
       [req.user.id]
     );
-    success(res, { connected: !!rows[0], connection: rows[0] || null });
+    success(res, {
+      connected: !!rows[0],
+      connection: rows[0] || null,
+      selectedRepos: rows[0]?.selected_repos || [],
+    });
   } catch (err) { next(err); }
 });
 
-// GET /api/github/repos — list user's repos
+// GET /api/github/repos — fetch all repos from GitHub API + cache them
 router.get('/repos', authenticate, githubLimiter, async (req, res, next) => {
   try {
     const token = await getGitHubToken(req.user.id);
@@ -58,6 +62,60 @@ router.get('/repos', authenticate, githubLimiter, async (req, res, next) => {
     );
 
     success(res, { repos });
+  } catch (err) { next(err); }
+});
+
+// GET /api/github/selected-repos — get user's chosen repos
+router.get('/selected-repos', authenticate, async (req, res, next) => {
+  try {
+    const { rows } = await query(
+      'SELECT selected_repos FROM github_connections WHERE user_id = $1',
+      [req.user.id]
+    );
+    if (!rows[0]) throw new AppError('GitHub not connected', 400);
+    success(res, { selectedRepos: rows[0].selected_repos || [] });
+  } catch (err) { next(err); }
+});
+
+// PATCH /api/github/selected-repos — save user's chosen repos
+// Body: { selectedRepos: [...repo objects] }
+// We block removal of any repo currently linked to a skill (matched by full_name OR numeric id).
+router.patch('/selected-repos', authenticate, async (req, res, next) => {
+  try {
+    const { selectedRepos } = req.body;
+    if (!Array.isArray(selectedRepos)) throw new AppError('selectedRepos must be an array', 400);
+
+    // Find all repos currently linked to this user's skills
+    const { rows: linkedRows } = await query(
+      `SELECT linked_repo_id, linked_repo_name FROM skills WHERE user_id = $1 AND linked_repo_id IS NOT NULL`,
+      [req.user.id]
+    );
+
+    // Build lookup sets from the incoming selection — match by full_name OR numeric id
+    const incomingByFullName = new Set(selectedRepos.map(r => r.full_name).filter(Boolean));
+    const incomingByNumericId = new Set(selectedRepos.map(r => String(r.id)).filter(Boolean));
+
+    for (const row of linkedRows) {
+      const storedVal = String(row.linked_repo_id);
+      // storedVal may be "owner/repo" (full_name) or a numeric GitHub repo id
+      const isPresent =
+        incomingByFullName.has(storedVal) ||           // stored as full_name
+        incomingByNumericId.has(storedVal) ||           // stored as numeric id
+        selectedRepos.some(r => r.full_name?.endsWith('/' + row.linked_repo_name)); // name fallback
+
+      if (!isPresent) {
+        throw new ForbiddenError(
+          `Cannot deselect repository "${row.linked_repo_name || storedVal}" — it is linked to a skill. Unlink it from the skill first.`
+        );
+      }
+    }
+
+    await query(
+      'UPDATE github_connections SET selected_repos = $1, updated_at = NOW() WHERE user_id = $2',
+      [JSON.stringify(selectedRepos), req.user.id]
+    );
+
+    success(res, { selectedRepos });
   } catch (err) { next(err); }
 });
 
