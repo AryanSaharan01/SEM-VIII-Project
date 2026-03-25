@@ -18,7 +18,10 @@ export const formatDuration = (seconds) => {
 }
 
 export const formatDate = (date) => {
-  return new Date(date).toLocaleDateString('en-US', {
+  if (!date) return 'N/A'
+  const d = new Date(date)
+  if (isNaN(d.getTime())) return 'Invalid Date'
+  return d.toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
     year: 'numeric'
@@ -26,7 +29,10 @@ export const formatDate = (date) => {
 }
 
 export const formatDateTime = (date) => {
-  return new Date(date).toLocaleString('en-US', {
+  if (!date) return 'N/A'
+  const d = new Date(date)
+  if (isNaN(d.getTime())) return 'Invalid Date'
+  return d.toLocaleString('en-US', {
     month: 'short',
     day: 'numeric',
     hour: '2-digit',
