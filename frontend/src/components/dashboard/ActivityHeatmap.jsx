@@ -7,12 +7,12 @@ const ActivityHeatmap = ({ data }) => {
   const [hoveredDay, setHoveredDay] = useState(null)
 
   const getColor = (count) => {
-    if (count === 0) return 'bg-gray-100'
-    if (count === 1) return 'bg-emerald-200'
-    if (count === 2) return 'bg-emerald-400'
-    if (count === 3) return 'bg-emerald-600'
-    if (count >= 4) return 'bg-emerald-800'
-    return 'bg-gray-100'
+    if (count === 0) return 'bg-white/5'
+    if (count === 1) return 'bg-emerald-500/30'
+    if (count === 2) return 'bg-emerald-500/50'
+    if (count === 3) return 'bg-emerald-500/70'
+    if (count >= 4) return 'bg-emerald-500'
+    return 'bg-white/5'
   }
 
   const getTotalSessions = () => {
@@ -52,131 +52,140 @@ const ActivityHeatmap = ({ data }) => {
   return (
     <div className="space-y-6">
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white rounded-lg p-5 shadow-md hover:shadow-lg transition-all border border-gray-200">
+      <div className="grid md:grid-cols-4 gap-4">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="stat-card rounded-2xl p-6"
+        >
           <div className="flex items-center justify-between mb-2">
-            <span className="text-gray-600 text-sm font-medium">Total Sessions</span>
-            <Calendar className="w-5 h-5 text-primary-600" />
+            <span className="text-gray-400 text-sm">Total Sessions</span>
+            <Calendar className="w-5 h-5 text-blue-400" />
           </div>
-          <div className="text-3xl font-bold text-gray-900">{getTotalSessions()}</div>
-          <div className="text-xs text-gray-500 mt-1">Last 13 weeks</div>
-        </div>
+          <div className="text-3xl font-bold text-white">{getTotalSessions()}</div>
+          <div className="text-xs text-gray-500">Last 13 weeks</div>
+        </motion.div>
 
-        <div className="bg-orange-50 rounded-lg p-5 shadow-md hover:shadow-lg transition-all border border-orange-200">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="stat-card rounded-2xl p-6 border-orange-500/15"
+        >
           <div className="flex items-center justify-between mb-2">
-            <span className="text-orange-900 text-sm font-medium">Current Streak</span>
-            <Flame className="w-5 h-5 text-orange-500" />
+            <span className="text-gray-300 text-sm font-medium">Current Streak</span>
+            <Flame className="w-5 h-5 text-orange-400" />
           </div>
-          <div className="text-3xl font-bold text-orange-600">{getStreak()}</div>
-          <div className="text-xs text-orange-700 mt-1">Days in a row 🔥</div>
-        </div>
+          <div className="text-3xl font-bold text-orange-400">{getStreak()}</div>
+          <div className="text-xs text-gray-400">Days in a row 🔥</div>
+        </motion.div>
 
-        <div className="bg-white rounded-lg p-5 shadow-md hover:shadow-lg transition-all border border-gray-200">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="stat-card rounded-2xl p-6"
+        >
           <div className="flex items-center justify-between mb-2">
-            <span className="text-gray-600 text-sm font-medium">Best Streak</span>
-            <Target className="w-5 h-5 text-purple-600" />
+            <span className="text-gray-400 text-sm">Best Streak</span>
+            <Target className="w-5 h-5 text-purple-400" />
           </div>
-          <div className="text-3xl font-bold text-gray-900">{getBestStreak()}</div>
-          <div className="text-xs text-gray-500 mt-1">Personal best</div>
-        </div>
+          <div className="text-3xl font-bold text-white">{getBestStreak()}</div>
+          <div className="text-xs text-gray-500">Personal best</div>
+        </motion.div>
 
-        <div className="bg-white rounded-lg p-5 shadow-md hover:shadow-lg transition-all border border-gray-200">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="stat-card rounded-2xl p-6"
+        >
           <div className="flex items-center justify-between mb-2">
-            <span className="text-gray-600 text-sm font-medium">Avg per Week</span>
-            <TrendingUp className="w-5 h-5 text-emerald-600" />
+            <span className="text-gray-400 text-sm">Avg per Week</span>
+            <TrendingUp className="w-5 h-5 text-emerald-400" />
           </div>
-          <div className="text-3xl font-bold text-gray-900">
+          <div className="text-3xl font-bold text-white">
             {Math.round(getTotalSessions() / 13)}
           </div>
-          <div className="text-xs text-gray-500 mt-1">Sessions</div>
-        </div>
+          <div className="text-xs text-gray-500">Sessions</div>
+        </motion.div>
       </div>
 
-      {/* Heatmap */}
-      <div className="bg-white rounded-lg p-6 shadow-lg border border-gray-200 relative z-10">
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-lg font-bold text-gray-900">Activity Heatmap - Last 13 Weeks</h3>
+      {/* Horizontal Heatmap */}
+      <div className="glass-card glass-glow rounded-2xl p-6">
+        <h3 className="text-xl font-bold text-white mb-6 flex items-center justify-between">
+          <span>Activity Heatmap - Last 13 Weeks</span>
           <div className="flex items-center space-x-2">
             <span className="text-xs text-gray-500">Less</span>
             {[0, 1, 2, 3, 4].map(level => (
-              <div key={level} className={`w-3 h-3 ${getColor(level)} rounded`} />
+              <div key={level} className={`w-3 h-3 ${getColor(level)} rounded-sm`} />
             ))}
             <span className="text-xs text-gray-500">More</span>
           </div>
-        </div>
+        </h3>
         
-        <div className="w-full overflow-x-auto pb-6 pt-4">
-          <div className="min-w-full inline-block">
-            {/* Month labels */}
-            <div className="flex mb-3 pl-12">
-              {data.map((week, weekIndex) => {
-                if (week[0]) {
-                  const date = new Date(week[0].date)
-                  const isFirstOfMonth = date.getDate() <= 7
-                  return (
-                    <div key={weekIndex} className="flex-1 text-left" style={{ minWidth: '14px' }}>
-                      {isFirstOfMonth && (
-                        <span className="text-xs text-gray-600 font-medium">
-                          {months[date.getMonth()]}
-                        </span>
-                      )}
-                    </div>
-                  )
-                }
-                return <div key={weekIndex} className="flex-1" style={{ minWidth: '14px' }} />
-              })}
+        <div className="overflow-x-auto pb-4">
+          <div className="inline-flex flex-col min-w-full">
+            {/* Week days on left */}
+            <div className="flex">
+              <div className="w-16 flex-shrink-0" />
+              {/* Month labels */}
+              <div className="flex-1 flex mb-2">
+                {data.map((week, weekIndex) => {
+                  if (week[0]) {
+                    const date = new Date(week[0].date)
+                    const isFirstOfMonth = date.getDate() <= 7
+                    return (
+                      <div key={weekIndex} className="flex-1 min-w-[12px]">
+                        {isFirstOfMonth && (
+                          <span className="text-xs text-gray-500 font-medium">
+                            {months[date.getMonth()]}
+                          </span>
+                        )}
+                      </div>
+                    )
+                  }
+                  return <div key={weekIndex} className="flex-1 min-w-[12px]" />
+                })}
+              </div>
             </div>
 
-            {/* Heatmap grid */}
+            {/* Heatmap grid - Horizontal */}
             {weekDays.map((dayName, dayIndex) => (
-              <div key={dayName} className="flex items-center mb-2 group">
-                <div className="w-12 text-xs text-gray-600 font-medium pr-2">
+              <div key={dayName} className="flex items-center mb-1">
+                <div className="w-16 text-xs text-gray-400 font-medium flex-shrink-0">
                   {dayName}
                 </div>
-                <div className="flex gap-1 flex-1 relative">
+                <div className="flex space-x-1 flex-1">
                   {data.map((week, weekIndex) => {
                     const day = week[dayIndex]
                     return day ? (
-                      <div
+                      <motion.div
                         key={`${weekIndex}-${dayIndex}`}
+                        whileHover={{ scale: 1.5, zIndex: 10 }}
                         onMouseEnter={() => setHoveredDay(day)}
                         onMouseLeave={() => setHoveredDay(null)}
-                        className={`w-3.5 h-3.5 ${getColor(day.count)} rounded cursor-pointer transition-all hover:ring-2 hover:ring-primary-400 hover:scale-125 relative z-20`}
-                        style={{ minWidth: '14px', minHeight: '14px' }}
+                        className={`w-3 h-3 ${getColor(day.count)} rounded-sm cursor-pointer transition-all duration-200 relative`}
                       >
                         {hoveredDay === day && (
-                          <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-3 pointer-events-none z-50">
-                            <div className="bg-gray-900 text-white text-xs rounded-lg px-3 py-2 whitespace-nowrap shadow-2xl border border-gray-700">
-                              <div className="font-semibold mb-1">{formatDate(day.date)}</div>
-                              <div className="text-emerald-400 font-medium">
-                                {day.count} session{day.count !== 1 ? 's' : ''}
-                              </div>
+                          <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 z-20 pointer-events-none">
+                            <div className="bg-gray-900/95 backdrop-blur-md text-white text-xs rounded-xl px-3 py-2 whitespace-nowrap shadow-2xl shadow-black/40 border border-white/10">
+                              <div className="font-semibold">{formatDate(day.date)}</div>
+                              <div className="text-emerald-300">{day.count} session{day.count !== 1 ? 's' : ''}</div>
                               {day.sessions && day.sessions.length > 0 && (
-                                <div className="mt-2 pt-2 border-t border-gray-700 max-w-xs">
+                                <div className="mt-1 pt-1 border-t border-gray-700">
                                   <div className="text-gray-300 text-xs">
-                                    {day.sessions.slice(0, 2).map((s, i) => (
-                                      <div key={i} className="truncate">• {s.topic}</div>
-                                    ))}
-                                    {day.sessions.length > 2 && (
-                                      <div className="text-gray-400">+{day.sessions.length - 2} more</div>
-                                    )}
+                                    {day.sessions.slice(0, 2).map(s => s.topic).join(', ')}
+                                    {day.sessions.length > 2 && '...'}
                                   </div>
                                 </div>
                               )}
-                              {/* Arrow */}
-                              <div className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-px">
-                                <div className="w-2 h-2 bg-gray-900 rotate-45 border-r border-b border-gray-700"></div>
-                              </div>
                             </div>
                           </div>
                         )}
-                      </div>
+                      </motion.div>
                     ) : (
-                      <div 
-                        key={`${weekIndex}-${dayIndex}`} 
-                        className="w-3.5 h-3.5 bg-gray-100 rounded" 
-                        style={{ minWidth: '14px', minHeight: '14px' }}
-                      />
+                      <div key={`${weekIndex}-${dayIndex}`} className="w-3 h-3 bg-white/5 rounded-sm" />
                     )
                   })}
                 </div>
@@ -186,30 +195,30 @@ const ActivityHeatmap = ({ data }) => {
         </div>
 
         {/* Additional insights */}
-        <div className="mt-6 pt-6 border-t border-gray-200 grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+        <div className="mt-6 pt-6 border-t border-white/10 grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
           <div>
-            <div className="text-2xl font-bold text-primary-600">
+            <div className="text-2xl font-bold text-blue-400">
               {data.flat().filter(d => d.count > 0).length}
             </div>
-            <div className="text-xs text-gray-500 mt-1">Active Days</div>
+            <div className="text-xs text-gray-500">Active Days</div>
           </div>
           <div>
-            <div className="text-2xl font-bold text-emerald-600">
+            <div className="text-2xl font-bold text-emerald-400">
               {Math.round((data.flat().filter(d => d.count > 0).length / (13 * 7)) * 100)}%
             </div>
-            <div className="text-xs text-gray-500 mt-1">Consistency</div>
+            <div className="text-xs text-gray-500">Consistency</div>
           </div>
           <div>
-            <div className="text-2xl font-bold text-purple-600">
+            <div className="text-2xl font-bold text-purple-400">
               {Math.max(...data.flat().map(d => d.count))}
             </div>
-            <div className="text-xs text-gray-500 mt-1">Max in a Day</div>
+            <div className="text-xs text-gray-500">Max in a Day</div>
           </div>
           <div>
-            <div className="text-2xl font-bold text-orange-600">
+            <div className="text-2xl font-bold text-orange-400">
               {data.flat().filter(d => d.count >= 2).length}
             </div>
-            <div className="text-xs text-gray-500 mt-1">Multi-session Days</div>
+            <div className="text-xs text-gray-500">Multi-session Days</div>
           </div>
         </div>
       </div>
