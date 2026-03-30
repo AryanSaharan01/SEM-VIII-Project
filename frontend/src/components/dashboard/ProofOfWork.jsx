@@ -129,7 +129,7 @@ const ProofOfWork = ({
           <div>
             <button
               onClick={() => toggleFolder(item.path)}
-              className="flex items-center space-x-2 w-full px-2 py-1.5 hover:bg-gray-100 rounded text-left"
+              className="flex items-center space-x-2 w-full px-2 py-1.5 hover:bg-white/5 rounded text-left"
             >
               {loadingFolder === item.path ? (
                 <Loader className="w-4 h-4 animate-spin text-gray-400" />
@@ -139,7 +139,7 @@ const ProofOfWork = ({
                 <ChevronRight className="w-4 h-4 text-gray-400" />
               )}
               <Folder className="w-4 h-4 text-yellow-500" />
-              <span className="text-sm text-gray-700">{item.name}</span>
+              <span className="text-sm text-gray-300">{item.name}</span>
             </button>
             {expandedFolders[item.path] && (
               <div className="ml-2">
@@ -152,19 +152,19 @@ const ProofOfWork = ({
             onClick={() => toggleFileSelection(item)}
             className={`flex items-center space-x-2 w-full px-2 py-1.5 rounded text-left transition-colors ${
               selectedFiles.find(f => f.path === item.path)
-                ? 'bg-primary-100 border border-primary-300'
-                : 'hover:bg-gray-100'
+                ? 'bg-primary-500/10 border border-primary-500/30'
+                : 'hover:bg-white/5'
             }`}
           >
             <div className="w-4 h-4 flex items-center justify-center">
               {selectedFiles.find(f => f.path === item.path) ? (
                 <Check className="w-4 h-4 text-primary-600" />
               ) : (
-                <div className="w-3 h-3 border border-gray-300 rounded" />
+                <div className="w-3 h-3 border border-white/20 rounded" />
               )}
             </div>
             <FileCode className="w-4 h-4 text-blue-500" />
-            <span className="text-sm text-gray-700">{item.name}</span>
+            <span className="text-sm text-gray-300">{item.name}</span>
           </button>
         )}
       </div>
@@ -187,27 +187,27 @@ const ProofOfWork = ({
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.9, y: 20 }}
           onClick={(e) => e.stopPropagation()}
-          className="bg-white rounded-2xl p-6 max-w-2xl w-full max-h-[85vh] overflow-hidden shadow-2xl border border-gray-100 flex flex-col"
+          className="glass-card glass-glow rounded-2xl p-6 max-w-2xl w-full max-h-[85vh] overflow-hidden shadow-2xl flex flex-col"
         >
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold text-gray-900">Attach Proof of Work</h2>
+            <h2 className="text-xl font-bold text-white">Attach Proof of Work</h2>
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 transition-colors"
+              className="text-gray-500 hover:text-white transition-colors"
             >
               <X className="w-6 h-6" />
             </button>
           </div>
 
           {/* Tabs */}
-          <div className="flex space-x-2 mb-4 border-b border-gray-200">
+          <div className="flex space-x-2 mb-4 border-b border-white/10">
             {skillCategory === 'coding' && githubConnection && (
               <button
                 onClick={() => setActiveTab('github')}
                 className={`flex items-center space-x-2 px-4 py-2 border-b-2 transition-colors ${
                   activeTab === 'github'
-                    ? 'border-primary-600 text-primary-600'
-                    : 'border-transparent text-gray-600 hover:text-gray-900'
+                    ? 'border-primary-500 text-primary-400'
+                    : 'border-transparent text-gray-500 hover:text-white'
                 }`}
               >
                 <Github className="w-4 h-4" />
@@ -218,8 +218,8 @@ const ProofOfWork = ({
               onClick={() => setActiveTab('upload')}
               className={`flex items-center space-x-2 px-4 py-2 border-b-2 transition-colors ${
                 activeTab === 'upload'
-                  ? 'border-primary-600 text-primary-600'
-                  : 'border-transparent text-gray-600 hover:text-gray-900'
+                  ? 'border-primary-500 text-primary-400'
+                  : 'border-transparent text-gray-500 hover:text-white'
               }`}
             >
               <Upload className="w-4 h-4" />
@@ -232,12 +232,12 @@ const ProofOfWork = ({
             {/* GitHub File Browser */}
             {activeTab === 'github' && githubConnection && (
               <div className="space-y-4">
-                <div className="flex items-center space-x-2 text-sm text-gray-600 bg-gray-50 p-3 rounded-lg">
+                <div className="flex items-center space-x-2 text-sm text-gray-400 glass p-3 rounded-lg">
                   <Github className="w-4 h-4" />
-                  <span>Browsing: <strong>{githubConnection.repo?.name || 'repository'}</strong></span>
+                  <span>Browsing: <strong className="text-white">{githubConnection.repo?.name || 'repository'}</strong></span>
                 </div>
 
-                <div className="border border-gray-200 rounded-lg p-3 max-h-64 overflow-y-auto">
+                <div className="border border-white/10 rounded-lg p-3 max-h-64 overflow-y-auto bg-white/5">
                   {renderFolderContents(mockRepoStructure.root)}
                 </div>
 
@@ -262,10 +262,10 @@ const ProofOfWork = ({
               <div className="space-y-4">
                 <div
                   onClick={() => fileInputRef.current?.click()}
-                  className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-primary-500 hover:bg-primary-50 transition-colors"
+                  className="border-2 border-dashed border-white/10 rounded-lg p-8 text-center cursor-pointer hover:border-primary-500 hover:bg-primary-500/5 transition-colors"
                 >
-                  <Upload className="w-10 h-10 text-gray-400 mx-auto mb-3" />
-                  <p className="text-gray-600 mb-1">Click to upload or drag and drop</p>
+                  <Upload className="w-10 h-10 text-gray-500 mx-auto mb-3" />
+                  <p className="text-gray-400 mb-1">Click to upload or drag and drop</p>
                   <p className="text-xs text-gray-500">PDF, Images, Documents (Max 10MB)</p>
                 </div>
                 <input
@@ -282,19 +282,19 @@ const ProofOfWork = ({
             {/* Attached Proofs */}
             {proofs.length > 0 && (
               <div className="mt-6">
-                <h3 className="text-sm font-semibold text-gray-700 mb-3">
+                <h3 className="text-sm font-semibold text-gray-400 mb-3">
                   Attached Files ({proofs.length})
                 </h3>
                 <div className="space-y-2">
                   {proofs.map((proof, index) => (
                     <div
                       key={index}
-                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                      className="flex items-center justify-between p-3 bg-white/5 rounded-lg"
                     >
                       <div className="flex items-center space-x-3">
                         {getFileIcon(proof)}
                         <div>
-                          <p className="text-sm font-medium text-gray-900">{proof.name}</p>
+                          <p className="text-sm font-medium text-white">{proof.name}</p>
                           <p className="text-xs text-gray-500">
                             {proof.type === 'github' ? (
                               <span className="flex items-center">
@@ -321,7 +321,7 @@ const ProofOfWork = ({
           </div>
 
           {/* Footer */}
-          <div className="flex space-x-3 mt-6 pt-4 border-t border-gray-200">
+          <div className="flex space-x-3 mt-6 pt-4 border-t border-white/10">
             <button onClick={handleSave} className="flex-1 btn-primary">
               Save Proof of Work
             </button>

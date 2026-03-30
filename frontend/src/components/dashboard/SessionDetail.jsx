@@ -1,158 +1,22 @@
-import React, { useState } from 'react'
+import React, { useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   X, Clock, Calendar, Lock, Shield, Github, 
   FileText, Image, FileCode, ExternalLink, Download,
-  ChevronRight, Hash, Link2, Code, Eye, ChevronDown
+  ChevronRight, Hash, Link2, Code, Eye, ChevronDown, Loader, AlertCircle
 } from 'lucide-react'
 import { formatDate, formatDuration, getPhaseColor } from '../../utils/helpers'
+import { getGitHubFile, getGitHubDefaultBranch } from '../../services/api'
 
 const SessionDetail = ({ onClose, session }) => {
   const [selectedFile, setSelectedFile] = useState(null)
   const [showCodeViewer, setShowCodeViewer] = useState(false)
+  const [fileContent, setFileContent] = useState('')
+  const [fileLoading, setFileLoading] = useState(false)
+  const [fileError, setFileError] = useState('')
+  const [fileBranch, setFileBranch] = useState('main')
 
   if (!session) return null
-
-  // Mock file contents for GitHub files
-  const mockFileContents = {
-    'src/App.jsx': `import React, { useState } from 'react'
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
-import Landing from './pages/Landing'
-import Dashboard from './pages/Dashboard'
-import './App.css'
-
-function App() {
-  const [user, setUser] = useState(null)
-
-  return (
-    <Router>
-      <div className="min-h-screen bg-gray-50">
-        <Routes>
-          <Route path="/" element={<Landing onLogin={setUser} />} />
-          <Route path="/dashboard" element={<Dashboard user={user} />} />
-        </Routes>
-      </div>
-    </Router>
-  )
-}
-
-export default App`,
-    'src/components/Header.jsx': `import React from 'react'
-import { Link } from 'react-router-dom'
-import { Menu, X, User } from 'lucide-react'
-
-const Header = ({ user, onLogout }) => {
-  const [isMenuOpen, setIsMenuOpen] = useState(false)
-
-  return (
-    <header className="bg-white shadow-sm border-b">
-      <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-16">
-          <div className="flex items-center">
-            <Link to="/" className="font-bold text-xl">
-              SkillLedger
-            </Link>
-          </div>
-          {user && (
-            <div className="flex items-center space-x-4">
-              <span className="text-gray-700">{user.name}</span>
-              <button onClick={onLogout}>Logout</button>
-            </div>
-          )}
-        </div>
-      </nav>
-    </header>
-  )
-}
-
-export default Header`,
-    'src/pages/Dashboard.jsx': `import React, { useState, useEffect } from 'react'
-import { motion } from 'framer-motion'
-import Sidebar from '../components/dashboard/Sidebar'
-import SkillCard from '../components/dashboard/SkillCard'
-import Timeline from '../components/dashboard/Timeline'
-
-const Dashboard = ({ user }) => {
-  const [skills, setSkills] = useState([])
-  const [selectedSkill, setSelectedSkill] = useState(null)
-
-  useEffect(() => {
-    // Load user skills
-    loadSkills()
-  }, [])
-
-  const loadSkills = async () => {
-    const data = await fetchSkills()
-    setSkills(data)
-    if (data.length > 0) setSelectedSkill(data[0])
-  }
-
-  return (
-    <div className="min-h-screen bg-gray-100">
-      <Sidebar skills={skills} onSelectSkill={setSelectedSkill} />
-      <main className="ml-64 p-8">
-        {selectedSkill && <SkillCard skill={selectedSkill} />}
-      </main>
-    </div>
-  )
-}
-
-export default Dashboard`,
-    'src/utils/helpers.js': `// Helper utility functions
-
-export const formatDate = (dateString) => {
-  const date = new Date(dateString)
-  return date.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric'
-  })
-}
-
-export const formatDuration = (seconds) => {
-  const hours = Math.floor(seconds / 3600)
-  const minutes = Math.floor((seconds % 3600) / 60)
-  if (hours > 0) return \`\${hours}h \${minutes}m\`
-  return \`\${minutes}m\`
-}
-
-export const getPhaseColor = (phase) => {
-  const colors = {
-    'Exposure': 'bg-purple-500',
-    'Confusion': 'bg-red-500',
-    'Learning': 'bg-yellow-500',
-    'Integration': 'bg-blue-500',
-    'Proficiency': 'bg-green-500'
-  }
-  return colors[phase] || 'bg-gray-500'
-}`,
-    'package.json': `{
-  "name": "skill-ledger",
-  "version": "1.0.0",
-  "private": true,
-  "dependencies": {
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "react-router-dom": "^6.0.0",
-    "framer-motion": "^10.0.0",
-    "lucide-react": "^0.263.0",
-    "tailwindcss": "^3.0.0"
-  },
-  "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
-  }
-}`
-  }
-
-  const getFileContent = (file) => {
-    // For GitHub files, try to get mock content
-    if (file.type === 'github') {
-      return mockFileContents[file.path] || `// Content of ${file.path}\n// File loaded from GitHub repository\n\nconsole.log('Hello from ${file.name}');`
-    }
-    return null
-  }
 
   const getFileIcon = (proof) => {
     if (proof.type === 'github') return <FileCode className="w-5 h-5 text-blue-600" />
@@ -163,11 +27,11 @@ export const getPhaseColor = (phase) => {
 
   const getDifficultyStyle = (difficulty) => {
     switch (difficulty) {
-      case 'easy': return 'bg-green-100 text-green-700 border-green-300'
-      case 'medium': return 'bg-yellow-100 text-yellow-700 border-yellow-300'
-      case 'hard': return 'bg-orange-100 text-orange-700 border-orange-300'
-      case 'expert': return 'bg-red-100 text-red-700 border-red-300'
-      default: return 'bg-gray-100 text-gray-700 border-gray-300'
+      case 'easy': return 'bg-green-500/10 text-green-400 border-green-500/30'
+      case 'medium': return 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30'
+      case 'hard': return 'bg-orange-500/10 text-orange-400 border-orange-500/30'
+      case 'expert': return 'bg-red-500/10 text-red-400 border-red-500/30'
+      default: return 'bg-white/5 text-gray-400 border-white/10'
     }
   }
 
@@ -188,17 +52,37 @@ export const getPhaseColor = (phase) => {
     return langMap[ext] || 'plaintext'
   }
 
-  // Get all proof of work files (support both 'proofs' and 'proofOfWork' keys)
-  const proofFiles = session.proofOfWork || session.proofs || []
+  // Get all proof of work files (support both snake_case and camelCase keys)
+  const proofFiles = session.proof_of_work || session.proofOfWork || session.proofs || []
   const githubFiles = proofFiles.filter(f => f.type === 'github')
   const uploadedFiles = proofFiles.filter(f => f.type === 'upload')
 
-  const handleFileClick = (file) => {
-    if (file.type === 'github') {
-      setSelectedFile(file)
-      setShowCodeViewer(true)
+  const handleFileClick = useCallback(async (file) => {
+    if (file.type !== 'github') return
+    setSelectedFile(file)
+    setShowCodeViewer(true)
+    setFileContent('')
+    setFileError('')
+    setFileLoading(true)
+    setFileBranch('main')
+    try {
+      // repoName stored as "owner/repo" full_name
+      const repoFullName = file.repoName || file.repo_name || ''
+      const [owner, repo] = repoFullName.split('/')
+      if (!owner || !repo) throw new Error('Unknown repository')
+      // Fetch file content and default branch in parallel
+      const [result, branch] = await Promise.all([
+        getGitHubFile(owner, repo, file.path),
+        getGitHubDefaultBranch(owner, repo),
+      ])
+      setFileContent(result.content || '')
+      setFileBranch(branch)
+    } catch (err) {
+      setFileError(err.message || 'Failed to load file content.')
+    } finally {
+      setFileLoading(false)
     }
-  }
+  }, [])
 
   return (
     <AnimatePresence>
@@ -214,10 +98,10 @@ export const getPhaseColor = (phase) => {
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.9, y: 20 }}
           onClick={(e) => e.stopPropagation()}
-          className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden shadow-2xl border border-gray-100 flex flex-col"
+          className="glass-card glass-glow rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden shadow-2xl flex flex-col"
         >
           {/* Header */}
-          <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-primary-50 to-purple-50">
+          <div className="p-6 border-b border-white/10 bg-gradient-to-r from-primary-500/10 to-purple-500/10">
             <div className="flex items-start justify-between">
               <div className="flex-1">
                 <div className="flex items-center space-x-3 mb-2">
@@ -230,15 +114,15 @@ export const getPhaseColor = (phase) => {
                     </span>
                   )}
                 </div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">{session.topic}</h2>
-                <div className="flex items-center space-x-4 text-sm text-gray-600">
+                <h2 className="text-2xl font-bold text-white mb-2">{session.topic}</h2>
+                <div className="flex items-center space-x-4 text-sm text-gray-400">
                   <span className="flex items-center">
                     <Calendar className="w-4 h-4 mr-1.5" />
-                    {formatDate(session.clientTs)}
+                    {formatDate(session.client_ts || session.clientTs)}
                   </span>
                   <span className="flex items-center">
                     <Clock className="w-4 h-4 mr-1.5" />
-                    {formatDuration(session.durationSeconds)}
+                    {formatDuration(session.duration_seconds || session.durationSeconds)}
                   </span>
                   {proofFiles.length > 0 && (
                     <span className="flex items-center text-primary-600">
@@ -250,7 +134,7 @@ export const getPhaseColor = (phase) => {
               </div>
               <button
                 onClick={onClose}
-                className="text-gray-400 hover:text-gray-600 transition-colors p-1"
+                className="text-gray-500 hover:text-white transition-colors p-1"
               >
                 <X className="w-6 h-6" />
               </button>
@@ -261,11 +145,11 @@ export const getPhaseColor = (phase) => {
           <div className="flex-1 overflow-y-auto p-6 space-y-6">
             {/* Notes Section */}
             <div>
-              <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-3">
+              <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">
                 Session Notes
               </h3>
-              <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
-                <p className="text-gray-800 leading-relaxed whitespace-pre-wrap">
+              <div className="glass rounded-xl p-4 max-h-48 overflow-y-auto">
+                <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-wrap">
                   {session.notes}
                 </p>
               </div>
@@ -274,7 +158,7 @@ export const getPhaseColor = (phase) => {
             {/* Proof of Work Section - Enhanced */}
             {proofFiles.length > 0 && (
               <div>
-                <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-3">
+                <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">
                   Proof of Work ({proofFiles.length} files)
                 </h3>
                 
@@ -282,30 +166,27 @@ export const getPhaseColor = (phase) => {
                 {githubFiles.length > 0 && (
                   <div className="mb-4">
                     <div className="flex items-center space-x-2 mb-2">
-                      <Github className="w-4 h-4 text-gray-600" />
-                      <span className="text-sm font-medium text-gray-700">GitHub Files</span>
+                      <Github className="w-4 h-4 text-gray-400" />
+                      <span className="text-sm font-medium text-gray-300">GitHub Files</span>
                     </div>
-                    <div className="grid gap-2">
+                    <div className="grid gap-2 max-h-40 overflow-y-auto">
                       {githubFiles.map((file, index) => (
                         <button
                           key={index}
                           onClick={() => handleFileClick(file)}
-                          className={`flex items-center justify-between p-3 bg-white border rounded-lg hover:shadow-md transition-all text-left ${
+                          className={`flex items-center justify-between p-2.5 glass border rounded-lg hover:shadow-md transition-all text-left ${
                             selectedFile?.path === file.path 
-                              ? 'border-primary-500 bg-primary-50 ring-2 ring-primary-200' 
-                              : 'border-gray-200 hover:border-primary-300'
+                              ? 'border-primary-500 bg-primary-500/10 ring-2 ring-primary-500/20' 
+                              : 'border-white/10 hover:border-primary-500/30'
                           }`}
                         >
-                          <div className="flex items-center space-x-3">
-                            <FileCode className="w-5 h-5 text-blue-600" />
-                            <div>
-                              <p className="font-medium text-gray-900">{file.name || file.path.split('/').pop()}</p>
-                              <p className="text-xs text-gray-500">{file.path}</p>
-                            </div>
+                          <div className="flex items-center space-x-2 min-w-0 flex-1">
+                            <FileCode className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                            <span className="font-medium text-white text-sm truncate">{file.name || file.path.split('/').pop()}</span>
                           </div>
-                          <div className="flex items-center space-x-2">
-                            <span className="text-xs text-primary-600 font-medium">View Code</span>
-                            <Eye className="w-4 h-4 text-primary-600" />
+                          <div className="flex items-center space-x-1.5 flex-shrink-0 ml-2">
+                            <span className="text-xs text-primary-600 font-medium">View</span>
+                            <Eye className="w-3.5 h-3.5 text-primary-600" />
                           </div>
                         </button>
                       ))}
@@ -338,7 +219,7 @@ export const getPhaseColor = (phase) => {
                               value={selectedFile.path}
                               onChange={(e) => {
                                 const file = githubFiles.find(f => f.path === e.target.value)
-                                if (file) setSelectedFile(file)
+                                if (file) handleFileClick(file)
                               }}
                               className="text-xs bg-gray-700 text-gray-300 border border-gray-600 rounded px-2 py-1"
                             >
@@ -359,28 +240,40 @@ export const getPhaseColor = (phase) => {
                       </div>
                       
                       {/* Code Content */}
-                      <div className="p-4 overflow-x-auto max-h-80 overflow-y-auto">
-                        <pre className="text-sm font-mono">
-                          <code className="text-gray-300">
-                            {getFileContent(selectedFile)?.split('\n').map((line, idx) => (
-                              <div key={idx} className="flex">
-                                <span className="text-gray-600 select-none w-8 text-right mr-4 flex-shrink-0">
-                                  {idx + 1}
-                                </span>
-                                <span className="flex-1">{line || ' '}</span>
-                              </div>
-                            ))}
-                          </code>
-                        </pre>
+                      <div className="p-4 overflow-x-auto max-h-64 overflow-y-auto">
+                        {fileLoading ? (
+                          <div className="flex items-center justify-center py-12 text-gray-400">
+                            <Loader className="w-5 h-5 animate-spin mr-2" />
+                            <span className="text-sm">Loading file…</span>
+                          </div>
+                        ) : fileError ? (
+                          <div className="flex items-center space-x-2 text-red-400 py-8 justify-center">
+                            <AlertCircle className="w-4 h-4" />
+                            <span className="text-sm">{fileError}</span>
+                          </div>
+                        ) : (
+                          <pre className="text-sm font-mono">
+                            <code className="text-gray-300">
+                              {(fileContent || '').split('\n').map((line, idx) => (
+                                <div key={idx} className="flex">
+                                  <span className="text-gray-600 select-none w-8 text-right mr-4 flex-shrink-0">
+                                    {idx + 1}
+                                  </span>
+                                  <span className="flex-1">{line || ' '}</span>
+                                </div>
+                              ))}
+                            </code>
+                          </pre>
+                        )}
                       </div>
                       
                       {/* Code Viewer Footer */}
                       <div className="px-4 py-2 bg-gray-800 border-t border-gray-700 flex items-center justify-between">
                         <span className="text-xs text-gray-500">
-                          {getLanguageFromFile(selectedFile.path)} • {getFileContent(selectedFile)?.split('\n').length || 0} lines
+                          {getLanguageFromFile(selectedFile.path)} • {fileContent.split('\n').length} lines
                         </span>
                         <a
-                          href={`https://github.com/${selectedFile.repoName || 'user/repo'}/blob/main/${selectedFile.path}`}
+                          href={`https://github.com/${selectedFile.repoName || selectedFile.repo_name}/blob/${fileBranch}/${selectedFile.path}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-xs text-blue-400 hover:text-blue-300 flex items-center"
@@ -397,14 +290,14 @@ export const getPhaseColor = (phase) => {
                 {uploadedFiles.length > 0 && (
                   <div>
                     <div className="flex items-center space-x-2 mb-2">
-                      <FileText className="w-4 h-4 text-gray-600" />
-                      <span className="text-sm font-medium text-gray-700">Uploaded Files</span>
+                      <FileText className="w-4 h-4 text-gray-400" />
+                      <span className="text-sm font-medium text-gray-300">Uploaded Files</span>
                     </div>
                     <div className="grid gap-2">
                       {uploadedFiles.map((file, index) => (
                         <div
                           key={index}
-                          className="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg"
+                          className="flex items-center justify-between p-3 glass border border-white/10 rounded-lg"
                         >
                           <div className="flex items-center space-x-3">
                             {file.fileType?.startsWith('image/') ? (
@@ -413,7 +306,7 @@ export const getPhaseColor = (phase) => {
                               <FileText className="w-5 h-5 text-red-600" />
                             )}
                             <div>
-                              <p className="font-medium text-gray-900">{file.name}</p>
+                              <p className="font-medium text-white">{file.name}</p>
                               <p className="text-xs text-gray-500">{file.fileType || 'document'}</p>
                             </div>
                           </div>
@@ -430,58 +323,58 @@ export const getPhaseColor = (phase) => {
 
             {/* Verification Section */}
             <div>
-              <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-3">
+              <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">
                 Blockchain Verification
               </h3>
-              <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-4 border border-green-200">
+              <div className="glass rounded-xl p-4 border border-emerald-500/20">
                 <div className="flex items-start space-x-3 mb-4">
-                  <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                    <Shield className="w-5 h-5 text-green-600" />
+                  <div className="w-10 h-10 bg-emerald-500/10 border border-emerald-500/20 rounded-full flex items-center justify-center">
+                    <Shield className="w-5 h-5 text-emerald-400" />
                   </div>
                   <div>
-                    <h4 className="font-semibold text-green-900">Verified & Immutable</h4>
-                    <p className="text-sm text-green-700">This session is cryptographically secured</p>
+                    <h4 className="font-semibold text-emerald-400">Verified & Immutable</h4>
+                    <p className="text-sm text-emerald-400/70">This session is cryptographically secured</p>
                   </div>
                 </div>
 
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between py-2 border-b border-green-200">
-                    <span className="text-sm text-gray-600 flex items-center">
+                  <div className="flex items-center justify-between py-2 border-b border-white/5">
+                    <span className="text-sm text-gray-400 flex items-center">
                       <Hash className="w-4 h-4 mr-2" />
                       Entry Hash
                     </span>
-                    <code className="text-xs bg-white px-2 py-1 rounded font-mono text-gray-700">
-                      {session.entryHash?.substring(0, 24)}...
+                    <code className="text-xs bg-white/5 px-2 py-1 rounded font-mono text-gray-300">
+                      {(session.entry_hash || session.entryHash)?.substring(0, 24)}...
                     </code>
                   </div>
 
-                  <div className="flex items-center justify-between py-2 border-b border-green-200">
-                    <span className="text-sm text-gray-600 flex items-center">
+                  <div className="flex items-center justify-between py-2 border-b border-white/5">
+                    <span className="text-sm text-gray-400 flex items-center">
                       <Hash className="w-4 h-4 mr-2" />
                       Content Hash
                     </span>
-                    <code className="text-xs bg-white px-2 py-1 rounded font-mono text-gray-700">
-                      {session.contentHash?.substring(0, 24)}...
+                    <code className="text-xs bg-white/5 px-2 py-1 rounded font-mono text-gray-300">
+                      {(session.content_hash || session.contentHash)?.substring(0, 24)}...
                     </code>
                   </div>
 
-                  {session.prevHash && (
+                  {(session.prev_hash || session.prevHash) && (
                     <div className="flex items-center justify-between py-2">
-                      <span className="text-sm text-gray-600 flex items-center">
+                      <span className="text-sm text-gray-400 flex items-center">
                         <Link2 className="w-4 h-4 mr-2" />
                         Previous Hash
                       </span>
-                      <code className="text-xs bg-white px-2 py-1 rounded font-mono text-gray-700">
-                        {session.prevHash.substring(0, 24)}...
+                      <code className="text-xs bg-white/5 px-2 py-1 rounded font-mono text-gray-300">
+                        {(session.prev_hash || session.prevHash).substring(0, 24)}...
                       </code>
                     </div>
                   )}
                 </div>
 
-                <div className="mt-4 pt-3 border-t border-green-200">
-                  <p className="text-xs text-green-700">
+                <div className="mt-4 pt-3 border-t border-white/5">
+                  <p className="text-xs text-emerald-400/70">
                     <Lock className="w-3 h-3 inline mr-1" />
-                    Logged on {new Date(session.serverTs || session.clientTs).toLocaleString()}
+                    Logged on {new Date(session.server_ts || session.serverTs || session.client_ts || session.clientTs).toLocaleString()}
                   </p>
                 </div>
               </div>
@@ -489,7 +382,7 @@ export const getPhaseColor = (phase) => {
           </div>
 
           {/* Footer */}
-          <div className="p-4 border-t border-gray-200 bg-gray-50">
+          <div className="p-4 border-t border-white/10 glass">
             <button
               onClick={onClose}
               className="w-full btn-secondary"
