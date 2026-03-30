@@ -1,93 +1,159 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Github, CheckCircle, Loader, Trash2, Plus, ExternalLink } from 'lucide-react'
+import {
+  X, Github, CheckCircle, Loader, ExternalLink,
+  AlertCircle, RefreshCw, Lock, Search, Save
+} from 'lucide-react'
+import { getGitHubAuthUrl, getGitHubRepos, disconnectGitHub, saveSelectedRepos } from '../../services/api'
 
-const GitHubConnect = ({ onClose, onConnect, connectedRepos = [] }) => {
-  const [step, setStep] = useState(connectedRepos.length > 0 ? 'manage' : 'connect')
+/**
+ * GitHubConnect modal
+ * Props:
+ *   onClose         — close modal
+ *   onConnect(sel)  — called after saving selection (sel = selected repo objects) or null on disconnect
+ *   githubConnected — bool
+ *   githubLogin     — string | null
+ *   initialSelected — array of already-selected repo objects (from DB)
+ *   skills          — array of user skills (to detect linked repos)
+ */
+const GitHubConnect = ({
+  onClose,
+  onConnect,
+  githubConnected = false,
+  githubLogin = null,
+  initialSelected = [],
+  skills = [],
+}) => {
+  const [step, setStep] = useState(githubConnected ? 'manage' : 'connect')
   const [loading, setLoading] = useState(false)
-  const [availableRepos, setAvailableRepos] = useState([])
-  const [selectedRepos, setSelectedRepos] = useState(connectedRepos)
-  const [isAuthorized, setIsAuthorized] = useState(connectedRepos.length > 0)
+  const [reposLoading, setReposLoading] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [allRepos, setAllRepos] = useState([])
+  const [selectedIds, setSelectedIds] = useState(() => new Set(initialSelected.map(r => r.full_name)))
+  const [error, setError] = useState('')
+  const [blockedError, setBlockedError] = useState('')
+  const [searchQuery, setSearchQuery] = useState('')
 
-  // Mock GitHub repos for demo
-  const mockRepos = [
-    { id: 1, name: 'react-portfolio', fullName: 'user/react-portfolio', description: 'My personal portfolio built with React', language: 'JavaScript', stars: 12 },
-    { id: 2, name: 'python-ml-projects', fullName: 'user/python-ml-projects', description: 'Machine learning experiments', language: 'Python', stars: 8 },
-    { id: 3, name: 'node-api-starter', fullName: 'user/node-api-starter', description: 'Express.js API boilerplate', language: 'JavaScript', stars: 25 },
-    { id: 4, name: 'data-structures', fullName: 'user/data-structures', description: 'DSA implementations in multiple languages', language: 'TypeScript', stars: 45 },
-    { id: 5, name: 'leetcode-solutions', fullName: 'user/leetcode-solutions', description: 'My LeetCode problem solutions', language: 'Python', stars: 15 },
-    { id: 6, name: 'ecommerce-backend', fullName: 'user/ecommerce-backend', description: 'Node.js + Express e-commerce API', language: 'JavaScript', stars: 32 },
-    { id: 7, name: 'flutter-weather-app', fullName: 'user/flutter-weather-app', description: 'Weather app built with Flutter', language: 'Dart', stars: 18 },
-  ]
+  // Repos linked to skills — cannot be deselected.
+  // linked_repo_id may be stored as "owner/repo" full_name OR a numeric GitHub repo id.
+  const isRepoLinked = useMemo(() => {
+    const linkedIds = skills
+      .filter(s => s.linked_repo_id)
+      .map(s => String(s.linked_repo_id))
+    const linkedNames = skills
+      .filter(s => s.linked_repo_name)
+      .map(s => s.linked_repo_name)
+    return (repo) =>
+      linkedIds.includes(repo.full_name) ||      // stored as full_name
+      linkedIds.includes(String(repo.id)) ||     // stored as numeric id
+      linkedNames.includes(repo.name)            // fallback by name
+  }, [skills])
 
-  const handleGitHubAuth = async () => {
-    setLoading(true)
-    // Simulate OAuth flow
-    await new Promise(resolve => setTimeout(resolve, 1500))
-    setAvailableRepos(mockRepos)
-    setIsAuthorized(true)
-    setStep('selectRepos')
-    setLoading(false)
+  const getLinkedSkillForRepo = (repo) =>
+    skills.find(s =>
+      s.linked_repo_id === repo.full_name ||
+      String(s.linked_repo_id) === String(repo.id) ||
+      s.linked_repo_name === repo.name
+    )
+
+  useEffect(() => {
+    if (githubConnected && step === 'manage' && allRepos.length === 0) {
+      fetchAllRepos()
+    }
+  }, [githubConnected, step])
+
+  useEffect(() => {
+    setSelectedIds(new Set(initialSelected.map(r => r.full_name)))
+  }, [initialSelected])
+
+  const fetchAllRepos = async () => {
+    setReposLoading(true)
+    setError('')
+    try {
+      const repos = await getGitHubRepos()
+      setAllRepos(repos)
+    } catch {
+      setError('Failed to load repositories. Please try again.')
+    } finally {
+      setReposLoading(false)
+    }
   }
 
-  const toggleRepoSelection = (repo) => {
-    setSelectedRepos(prev => {
-      const isSelected = prev.some(r => r.id === repo.id)
-      if (isSelected) {
-        return prev.filter(r => r.id !== repo.id)
-      } else {
-        return [...prev, repo]
+  const handleGitHubAuth = () => {
+    window.location.href = getGitHubAuthUrl()
+  }
+
+  const toggleRepo = (repo) => {
+    setBlockedError('')
+    const isSelected = selectedIds.has(repo.full_name)
+    if (isSelected) {
+      if (isRepoLinked(repo)) {
+        const linkedSkill = getLinkedSkillForRepo(repo)
+        setBlockedError(
+          `"${repo.name}" is linked to skill "${linkedSkill?.name || 'a skill'}". Unlink it from the skill first to remove.`
+        )
+        return
       }
-    })
+      setSelectedIds(prev => { const n = new Set(prev); n.delete(repo.full_name); return n })
+    } else {
+      setSelectedIds(prev => new Set([...prev, repo.full_name]))
+    }
   }
 
-  const handleSaveRepos = () => {
-    onConnect(selectedRepos)
-    setStep('manage')
+  const handleSave = async () => {
+    setSaving(true)
+    setError('')
+    try {
+      const selected = allRepos.filter(r => selectedIds.has(r.full_name))
+      await saveSelectedRepos(selected)
+      onConnect(selected)
+    } catch (err) {
+      setError(err.message || 'Failed to save selection. Please try again.')
+    } finally {
+      setSaving(false)
+    }
   }
 
-  const handleRemoveRepo = (repoId) => {
-    const updated = selectedRepos.filter(r => r.id !== repoId)
-    setSelectedRepos(updated)
-    onConnect(updated)
-  }
-
-  const handleAddMore = async () => {
-    if (availableRepos.length === 0) {
-      setLoading(true)
-      await new Promise(resolve => setTimeout(resolve, 800))
-      setAvailableRepos(mockRepos)
+  const handleDisconnect = async () => {
+    const hasLinked = skills.some(s => s.linked_repo_id || s.linked_repo_name)
+    if (hasLinked) {
+      setError('You have repositories linked to skills. Unlink them from your skills before disconnecting GitHub.')
+      return
+    }
+    setLoading(true)
+    try {
+      await disconnectGitHub()
+      onConnect(null)
+      onClose()
+    } catch {
+      setError('Failed to disconnect. Please try again.')
+    } finally {
       setLoading(false)
     }
-    setStep('selectRepos')
   }
 
-  const handleDisconnectAll = () => {
-    setSelectedRepos([])
-    setIsAuthorized(false)
-    onConnect([])
-    setStep('connect')
-  }
+  const getLanguageColor = (lang) => ({
+    JavaScript: 'bg-yellow-400', TypeScript: 'bg-blue-600',
+    Python: 'bg-blue-500', Java: 'bg-red-500',
+    Dart: 'bg-cyan-500', Go: 'bg-cyan-400',
+    Rust: 'bg-orange-500', 'C++': 'bg-pink-500',
+    'C#': 'bg-purple-500', Ruby: 'bg-red-400',
+    PHP: 'bg-indigo-400', Swift: 'bg-orange-400',
+  })[lang] || 'bg-gray-400'
 
-  const getLanguageColor = (language) => {
-    const colors = {
-      'JavaScript': 'bg-yellow-400',
-      'TypeScript': 'bg-blue-600',
-      'Python': 'bg-blue-500',
-      'Java': 'bg-red-500',
-      'Dart': 'bg-cyan-500',
-      'Go': 'bg-cyan-400',
-      'Rust': 'bg-orange-500',
-    }
-    return colors[language] || 'bg-gray-400'
-  }
+  const filteredRepos = allRepos.filter(r =>
+    r.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (r.description || '').toLowerCase().includes(searchQuery.toLowerCase())
+  )
+
+  const selectedCount = selectedIds.size
+  const hasChanges = JSON.stringify([...selectedIds].sort()) !==
+    JSON.stringify(initialSelected.map(r => r.full_name).sort())
 
   return (
     <AnimatePresence>
       <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
+        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
         onClick={onClose}
         className="fixed inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-4"
       >
@@ -95,190 +161,177 @@ const GitHubConnect = ({ onClose, onConnect, connectedRepos = [] }) => {
           initial={{ opacity: 0, scale: 0.9, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.9, y: 20 }}
-          onClick={(e) => e.stopPropagation()}
-          className="bg-white rounded-2xl p-8 max-w-lg w-full max-h-[85vh] overflow-y-auto shadow-2xl border border-gray-100"
+          onClick={e => e.stopPropagation()}
+          className="glass-card glass-glow rounded-2xl p-6 max-w-lg w-full max-h-[90vh] flex flex-col shadow-2xl"
         >
-          <div className="flex items-center justify-between mb-6">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-5">
             <div className="flex items-center space-x-3">
-              <Github className="w-8 h-8 text-gray-900" />
-              <h2 className="text-2xl font-bold text-gray-900">GitHub Integration</h2>
+              <Github className="w-7 h-7 text-white" />
+              <h2 className="text-xl font-bold text-white">GitHub Integration</h2>
             </div>
-            <button
-              onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 transition-colors"
-            >
-              <X className="w-6 h-6" />
+            <button onClick={onClose} className="text-gray-500 hover:text-white transition-colors">
+              <X className="w-5 h-5" />
             </button>
           </div>
 
-          {/* Connect Step - Initial Authorization */}
+          {/* Error banner */}
+          <AnimatePresence>
+            {(error || blockedError) && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="flex items-start space-x-2 bg-red-500/10 border border-red-500/20 rounded-lg p-3 mb-4 text-red-400 text-sm"
+              >
+                <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                <span>{blockedError || error}</span>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* ── Connect step ────────────────────────────────── */}
           {step === 'connect' && (
             <div className="text-center py-8">
-              <div className="w-20 h-20 bg-gray-900 rounded-full flex items-center justify-center mx-auto mb-6">
+              <div className="w-20 h-20 bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-5">
                 <Github className="w-10 h-10 text-white" />
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">Connect Your GitHub</h3>
-              <p className="text-gray-600 mb-6">
-                Link your GitHub account to attach code files as proof of work for your coding skills.
+              <h3 className="text-xl font-semibold text-white mb-2">Connect Your GitHub</h3>
+              <p className="text-gray-400 text-sm mb-6">
+                Link GitHub to browse repositories and attach code files as proof of work.
+                After connecting you choose which repositories to make available.
               </p>
-              <button
-                onClick={handleGitHubAuth}
-                disabled={loading}
-                className="btn-primary w-full flex items-center justify-center space-x-2"
-              >
-                {loading ? (
-                  <>
-                    <Loader className="w-5 h-5 animate-spin" />
-                    <span>Connecting...</span>
-                  </>
-                ) : (
-                  <>
-                    <Github className="w-5 h-5" />
-                    <span>Authorize GitHub</span>
-                  </>
-                )}
+              <button onClick={handleGitHubAuth} disabled={loading} className="btn-primary w-full flex items-center justify-center space-x-2">
+                {loading
+                  ? <><Loader className="w-5 h-5 animate-spin" /><span>Redirecting…</span></>
+                  : <><Github className="w-5 h-5" /><span>Authorize with GitHub</span></>}
               </button>
-              <p className="text-xs text-gray-500 mt-4">
-                We only request read access to your public repositories.
-              </p>
+              <p className="text-xs text-gray-500 mt-4">Read-only access to repositories. Disconnect any time.</p>
             </div>
           )}
 
-          {/* Select Repos Step - Multi-select */}
-          {step === 'selectRepos' && (
-            <div>
-              <p className="text-gray-600 mb-4">
-                Select repositories to connect. You can link them to your coding skills later.
-              </p>
-              
-              <div className="space-y-2 max-h-80 overflow-y-auto mb-6">
-                {availableRepos.map(repo => {
-                  const isSelected = selectedRepos.some(r => r.id === repo.id)
+          {/* ── Manage step ─────────────────────────────────── */}
+          {step === 'manage' && (
+            <div className="flex flex-col flex-1 min-h-0">
+              {/* Connected badge */}
+              <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-3 mb-4 flex items-center space-x-3">
+                <CheckCircle className="w-5 h-5 text-emerald-400 flex-shrink-0" />
+                <div>
+                  <p className="font-semibold text-emerald-400 text-sm">GitHub Connected</p>
+                  {githubLogin && <p className="text-xs text-emerald-400/70">@{githubLogin}</p>}
+                </div>
+              </div>
+
+              {/* Title row */}
+              <div className="flex items-center justify-between mb-2">
+                <div>
+                  <p className="font-medium text-gray-300 text-sm">Select Repositories</p>
+                  <p className="text-xs text-gray-500">{selectedCount} selected · available in skills &amp; sessions</p>
+                </div>
+                <button onClick={fetchAllRepos} disabled={reposLoading} className="text-gray-500 hover:text-white transition-colors" title="Refresh repos">
+                  <RefreshCw className={`w-4 h-4 ${reposLoading ? 'animate-spin' : ''}`} />
+                </button>
+              </div>
+
+              {/* Search */}
+              {allRepos.length > 5 && (
+                <div className="relative mb-3">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                  <input
+                    type="text"
+                    placeholder="Search repositories…"
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                    className="w-full pl-8 pr-3 py-1.5 text-sm bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-white placeholder-gray-500"
+                  />
+                </div>
+              )}
+
+              {/* Repo list */}
+              <div className="flex-1 overflow-y-auto space-y-1.5 min-h-0 mb-4 pr-0.5">
+                {reposLoading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader className="w-5 h-5 animate-spin text-gray-400" />
+                    <span className="ml-2 text-gray-500 text-sm">Loading repositories…</span>
+                  </div>
+                ) : filteredRepos.length === 0 ? (
+                  <div className="text-center py-10 text-gray-400 text-sm">
+                    {searchQuery ? 'No matching repositories.' : 'No repositories found.'}
+                  </div>
+                ) : filteredRepos.map(repo => {
+                  const isSelected = selectedIds.has(repo.full_name)
+                  const isLinked = isRepoLinked(repo)
                   return (
-                    <button
+                    <div
                       key={repo.id}
-                      onClick={() => toggleRepoSelection(repo)}
-                      className={`w-full text-left p-4 border rounded-lg transition-all ${
-                        isSelected 
-                          ? 'border-primary-500 bg-primary-50 ring-2 ring-primary-200' 
-                          : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                      }`}
+                      onClick={() => toggleRepo(repo)}
+                      className={`flex items-center space-x-3 p-3 rounded-xl border cursor-pointer transition-all select-none
+                        ${isSelected ? 'border-primary-500/50 bg-primary-500/10' : 'border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/10'}`}
                     >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center space-x-2">
-                            <h4 className="font-semibold text-gray-900">{repo.name}</h4>
-                            {isSelected && (
-                              <CheckCircle className="w-4 h-4 text-primary-600" />
-                            )}
-                          </div>
-                          <p className="text-sm text-gray-600 mt-1 line-clamp-1">{repo.description}</p>
-                          <div className="flex items-center space-x-3 mt-2 text-xs text-gray-500">
-                            <span className="flex items-center">
-                              <span className={`w-3 h-3 rounded-full mr-1 ${getLanguageColor(repo.language)}`} />
+                      {/* Checkbox */}
+                      <div className={`w-5 h-5 rounded flex items-center justify-center flex-shrink-0 border-2 transition-colors
+                        ${isSelected ? 'bg-primary-600 border-primary-600' : 'border-white/20 bg-white/5'}`}>
+                        {isSelected && (
+                          <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                          </svg>
+                        )}
+                      </div>
+
+                      {/* Info */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center flex-wrap gap-1.5">
+                          <span className="font-medium text-white text-sm truncate">{repo.name}</span>
+                          {repo.private && <span className="text-xs text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">private</span>}
+                          {isLinked && (
+                            <span className="flex items-center gap-0.5 text-xs text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded">
+                              <Lock className="w-3 h-3" /><span>linked</span>
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          {repo.language && (
+                            <span className="flex items-center gap-1 text-xs text-gray-500">
+                              <span className={`w-2 h-2 rounded-full ${getLanguageColor(repo.language)}`} />
                               {repo.language}
                             </span>
-                            <span>⭐ {repo.stars}</span>
-                          </div>
-                        </div>
-                        <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
-                          isSelected ? 'bg-primary-600 border-primary-600' : 'border-gray-300'
-                        }`}>
-                          {isSelected && <CheckCircle className="w-3 h-3 text-white" />}
+                          )}
+                          {repo.description && <span className="text-xs text-gray-400 truncate">{repo.description}</span>}
                         </div>
                       </div>
-                    </button>
+
+                      {/* External link */}
+                      <a
+                        href={repo.html_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={e => e.stopPropagation()}
+                        className="text-gray-500 hover:text-white flex-shrink-0 p-1"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </a>
+                    </div>
                   )
                 })}
               </div>
 
-              <div className="flex space-x-3">
+              {/* Actions */}
+              <div className="space-y-2 pt-2 border-t border-white/10">
                 <button
-                  onClick={handleSaveRepos}
-                  disabled={selectedRepos.length === 0}
-                  className="flex-1 btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={handleSave}
+                  disabled={saving || reposLoading || !hasChanges}
+                  className="btn-primary w-full flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Connect {selectedRepos.length > 0 ? `(${selectedRepos.length})` : ''} Repositories
+                  {saving
+                    ? <><Loader className="w-4 h-4 animate-spin" /><span>Saving…</span></>
+                    : <><Save className="w-4 h-4" /><span>Save Selection ({selectedCount} repos)</span></>}
                 </button>
                 <button
-                  onClick={() => setStep(selectedRepos.length > 0 ? 'manage' : 'connect')}
-                  className="btn-secondary px-6"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Manage Step - View/Remove connected repos */}
-          {step === 'manage' && (
-            <div>
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
-                <div className="flex items-center space-x-3">
-                  <CheckCircle className="w-6 h-6 text-green-600" />
-                  <div>
-                    <h4 className="font-semibold text-green-900">GitHub Connected</h4>
-                    <p className="text-sm text-green-700">{selectedRepos.length} repositories linked</p>
-                  </div>
-                </div>
-              </div>
-
-              <h4 className="font-medium text-gray-700 mb-3">Connected Repositories</h4>
-              <div className="space-y-2 max-h-64 overflow-y-auto mb-6">
-                {selectedRepos.map(repo => (
-                  <div
-                    key={repo.id}
-                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200"
-                  >
-                    <div className="flex items-center space-x-3">
-                      <Github className="w-5 h-5 text-gray-700" />
-                      <div>
-                        <h5 className="font-medium text-gray-900">{repo.name}</h5>
-                        <div className="flex items-center space-x-2 text-xs text-gray-500">
-                          <span className={`w-2 h-2 rounded-full ${getLanguageColor(repo.language)}`} />
-                          <span>{repo.language}</span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <a
-                        href={`https://github.com/${repo.fullName}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="p-1.5 text-gray-400 hover:text-gray-600 transition-colors"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <ExternalLink className="w-4 h-4" />
-                      </a>
-                      <button
-                        onClick={() => handleRemoveRepo(repo.id)}
-                        className="p-1.5 text-gray-400 hover:text-red-600 transition-colors"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="space-y-2">
-                <button
-                  onClick={handleAddMore}
+                  onClick={handleDisconnect}
                   disabled={loading}
-                  className="w-full btn-secondary flex items-center justify-center space-x-2"
+                  className="w-full text-sm text-red-500 hover:text-red-700 py-1.5 transition-colors flex items-center justify-center gap-1"
                 >
-                  {loading ? (
-                    <Loader className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Plus className="w-4 h-4" />
-                  )}
-                  <span>Add More Repositories</span>
-                </button>
-                <button
-                  onClick={handleDisconnectAll}
-                  className="w-full text-sm text-red-600 hover:text-red-700 py-2 transition-colors"
-                >
-                  Disconnect GitHub Account
+                  {loading && <Loader className="w-3.5 h-3.5 animate-spin" />}
+                  <span>Disconnect GitHub Account</span>
                 </button>
               </div>
             </div>
