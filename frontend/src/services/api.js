@@ -1,7 +1,9 @@
-import { computeContentHash, computeEntryHash } from '../utils/helpers'
-
 // ─── Backend base URL ─────────────────────────────────────────────────────────
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+const rawApiUrl = (import.meta.env.VITE_API_URL || '').trim()
+const normalizedApiUrl = rawApiUrl.replace(/\/+$/, '')
+const API_BASE = normalizedApiUrl
+  ? (normalizedApiUrl.endsWith('/api') ? normalizedApiUrl : `${normalizedApiUrl}/api`)
+  : 'http://localhost:5000/api'
 
 // ─── Helper: make authenticated requests ─────────────────────────────────────
 const authHeaders = () => {
@@ -9,184 +11,7 @@ const authHeaders = () => {
   return token ? { Authorization: `Bearer ${token}` } : {}
 }
 
-// Seed Data
-const SEED_USER = {
-  id: 1,
-  email: 'demo@skillledger.com',
-  displayName: 'Demo User',
-  createdAt: '2025-11-01T00:00:00Z'
-}
-
-const SEED_SKILLS = [
-  {
-    id: 1,
-    userId: 1,
-    name: 'React Development',
-    category: 'coding',
-    createdAt: '2025-11-05T00:00:00Z',
-    score: 78,
-    consistencyScore: 87,
-    totalSessions: 24,
-    totalHours: 42
-  },
-  {
-    id: 2,
-    userId: 1,
-    name: 'Python Data Science',
-    category: 'coding',
-    createdAt: '2025-11-10T00:00:00Z',
-    score: 65,
-    consistencyScore: 72,
-    totalSessions: 18,
-    totalHours: 31
-  },
-  {
-    id: 3,
-    userId: 1,
-    name: 'Technical Writing',
-    category: 'writing',
-    createdAt: '2025-11-15T00:00:00Z',
-    score: 82,
-    consistencyScore: 91,
-    totalSessions: 16,
-    totalHours: 28
-  }
-]
-
-const generateSessions = () => {
-  const sessions = []
-  let id = 1
-  
-  // React sessions
-  const reactTopics = [
-    'Component Basics', 'Hooks Introduction', 'useState & useEffect',
-    'Custom Hooks', 'Context API', 'useReducer Pattern',
-    'React Router', 'Form Handling', 'Performance Optimization',
-    'Error Boundaries', 'Code Splitting', 'Testing with Jest',
-    'TypeScript Integration', 'Advanced Patterns', 'Server Components',
-    'Next.js Basics', 'State Management', 'Component Design',
-    'Accessibility', 'Animation with Framer', 'API Integration',
-    'Authentication Flow', 'Real-time Updates', 'Deployment'
-  ]
-  
-  reactTopics.forEach((topic, index) => {
-    const date = new Date('2025-11-05')
-    date.setDate(date.getDate() + index * 3)
-    sessions.push({
-      id: id++,
-      skillId: 1,
-      userId: 1,
-      topic,
-      notes: `Worked on ${topic.toLowerCase()}. ${index < 10 ? 'Found it challenging initially.' : 'Making good progress.'} ${index > 15 ? 'Feeling confident now!' : ''}`,
-      durationSeconds: 1800 + Math.floor(Math.random() * 3600),
-      clientTs: date.toISOString(),
-      serverTs: date.toISOString(),
-      contentHash: '',
-      entryHash: '',
-      prevHash: null,
-      deleted: false,
-      phase: index < 5 ? 'Exposure' : index < 10 ? 'Confusion' : index < 15 ? 'Learning' : index < 20 ? 'Integration' : 'Proficiency'
-    })
-  })
-  
-  // Python sessions
-  const pythonTopics = [
-    'NumPy Basics', 'Pandas DataFrames', 'Data Cleaning',
-    'Matplotlib Plotting', 'Seaborn Visualization', 'Statistical Analysis',
-    'Linear Regression', 'Decision Trees', 'Random Forests',
-    'Neural Networks', 'Model Evaluation', 'Feature Engineering',
-    'Cross Validation', 'Hyperparameter Tuning', 'Ensemble Methods',
-    'Deep Learning', 'NLP Basics', 'Time Series'
-  ]
-  
-  pythonTopics.forEach((topic, index) => {
-    const date = new Date('2025-11-10')
-    date.setDate(date.getDate() + index * 4)
-    sessions.push({
-      id: id++,
-      skillId: 2,
-      userId: 1,
-      topic,
-      notes: `Studied ${topic.toLowerCase()}. Practiced with real datasets. ${index > 10 ? 'Understanding patterns better.' : 'Still learning the fundamentals.'}`,
-      durationSeconds: 2400 + Math.floor(Math.random() * 2400),
-      clientTs: date.toISOString(),
-      serverTs: date.toISOString(),
-      contentHash: '',
-      entryHash: '',
-      prevHash: null,
-      deleted: false,
-      phase: index < 4 ? 'Exposure' : index < 8 ? 'Confusion' : index < 12 ? 'Learning' : index < 16 ? 'Integration' : 'Proficiency'
-    })
-  })
-  
-  // Writing sessions
-  const writingTopics = [
-    'Research Methodology', 'Literature Review', 'Thesis Statement',
-    'Argument Structure', 'Citation Practices', 'Academic Tone',
-    'Critical Analysis', 'Peer Review', 'Revision Strategies',
-    'Abstract Writing', 'Introduction Drafting', 'Conclusion Techniques',
-    'Paragraph Coherence', 'Technical Documentation', 'Style Guides',
-    'Publishing Process'
-  ]
-  
-  writingTopics.forEach((topic, index) => {
-    const date = new Date('2025-11-15')
-    date.setDate(date.getDate() + index * 5)
-    sessions.push({
-      id: id++,
-      skillId: 3,
-      userId: 1,
-      topic,
-      notes: `Focused on ${topic.toLowerCase()}. Revised previous work. ${index > 8 ? 'Writing is improving significantly.' : 'Building foundational skills.'}`,
-      durationSeconds: 3000 + Math.floor(Math.random() * 2000),
-      clientTs: date.toISOString(),
-      serverTs: date.toISOString(),
-      contentHash: '',
-      entryHash: '',
-      prevHash: null,
-      deleted: false,
-      phase: index < 3 ? 'Exposure' : index < 6 ? 'Confusion' : index < 10 ? 'Learning' : index < 14 ? 'Integration' : 'Proficiency'
-    })
-  })
-  
-  // Compute hashes
-  sessions.forEach((session, index) => {
-    session.contentHash = computeContentHash(
-      session.notes,
-      [],
-      session.durationSeconds,
-      session.topic
-    )
-    session.prevHash = index > 0 && sessions[index - 1].skillId === session.skillId 
-      ? sessions[index - 1].entryHash 
-      : null
-    session.entryHash = computeEntryHash(
-      session.prevHash,
-      session.serverTs,
-      session.contentHash,
-      session.userId
-    )
-  })
-  
-  return sessions
-}
-
-const SEED_SESSIONS = generateSessions()
-
-// Test credentials - for demo purposes only (bypasses backend)
-const TEST_EMAIL = 'test@skillledger.com'
-const DEMO_EMAIL = 'demo@skillledger.com'
-
-// ─── AUTH — calls real backend, falls back to demo accounts ──────────────────
-
 export const loginWithEmail = async (email) => {
-  // Demo accounts: handled locally, no backend call needed
-  if (email === DEMO_EMAIL || email === TEST_EMAIL) {
-    await new Promise(resolve => setTimeout(resolve, 600))
-    return { success: true, message: 'OTP sent to your email', isNewUser: false }
-  }
-
-  // Real email: call the backend to send a real OTP
   try {
     const res = await fetch(`${API_BASE}/auth/send-otp`, {
       method: 'POST',
@@ -203,20 +28,7 @@ export const loginWithEmail = async (email) => {
 }
 
 export const verifyOTP = async (email, otp, name) => {
-  // Demo account shortcuts (no backend call)
-  if (email === TEST_EMAIL) {
-    await new Promise(resolve => setTimeout(resolve, 600))
-    return { success: true, isNewUser: false, user: { ...SEED_USER, email: TEST_EMAIL, displayName: 'Test User' } }
-  }
-  if (email === DEMO_EMAIL) {
-    await new Promise(resolve => setTimeout(resolve, 600))
-    if (otp === '123456') return { success: true, isNewUser: false, user: SEED_USER }
-    return { success: false, message: 'Incorrect OTP. Demo account uses OTP: 123456' }
-  }
-
-  // Real email: verify with backend
   try {
-    // Only include name if it's a non-empty string (new user signup)
     const payload = { email, otp }
     if (name && name.trim()) payload.name = name.trim()
 
@@ -227,7 +39,7 @@ export const verifyOTP = async (email, otp, name) => {
     })
     const data = await res.json()
     if (!res.ok) return { success: false, message: data.message || 'OTP verification failed' }
-    // Store the real JWT token
+
     if (data.data?.token) localStorage.setItem('dtcs_token', data.data.token)
     return {
       success: true,
@@ -240,19 +52,7 @@ export const verifyOTP = async (email, otp, name) => {
   }
 }
 
-// ─── Helper: is this a demo/mock session? ────────────────────────────────────
-const isDemoUser = () => {
-  const user = JSON.parse(localStorage.getItem('dtcs_user') || '{}')
-  return user.email === 'demo@skillledger.com' || user.email === 'test@skillledger.com'
-}
-
 export const deleteSkill = async (skillId) => {
-  if (isDemoUser()) {
-    await new Promise(resolve => setTimeout(resolve, 400))
-    const idx = SEED_SKILLS.findIndex(s => s.id === skillId)
-    if (idx !== -1) SEED_SKILLS.splice(idx, 1)
-    return
-  }
   try {
     const res = await fetch(`${API_BASE}/skills/${skillId}`, {
       method: 'DELETE',
@@ -267,17 +67,11 @@ export const deleteSkill = async (skillId) => {
 }
 
 export const getSkills = async () => {
-  if (isDemoUser()) {
-    await new Promise(resolve => setTimeout(resolve, 300))
-    return SEED_SKILLS
-  }
   try {
     const res = await fetch(`${API_BASE}/skills`, { headers: authHeaders() })
     const data = await res.json()
     if (!res.ok) throw new Error(data.message)
-    // Backend returns { success, data: { skills: [...] } }
     const skills = Array.isArray(data.data?.skills) ? data.data.skills : []
-    // Map snake_case to camelCase for consistency
     return skills.map(s => ({
       ...s,
       createdAt: s.created_at || s.createdAt,
@@ -294,20 +88,6 @@ export const getSkills = async () => {
 }
 
 export const addSkill = async (skillData) => {
-  if (isDemoUser()) {
-    await new Promise(resolve => setTimeout(resolve, 500))
-    const newSkill = {
-      id: SEED_SKILLS.length + 1 + Math.floor(Math.random() * 1000),
-      userId: 1,
-      name: skillData.name,
-      category: skillData.category,
-      linkedRepo: skillData.linkedRepo || null,
-      createdAt: new Date().toISOString(),
-      score: 0, consistencyScore: 0, totalSessions: 0, totalHours: 0
-    }
-    SEED_SKILLS.push(newSkill)
-    return newSkill
-  }
   try {
     const res = await fetch(`${API_BASE}/skills`, {
       method: 'POST',
@@ -316,7 +96,6 @@ export const addSkill = async (skillData) => {
     })
     const data = await res.json()
     if (!res.ok) throw new Error(data.message)
-    // Backend returns { success, data: { skill: {...} } }
     return data.data?.skill || data.data
   } catch (err) {
     console.error('addSkill error:', err)
@@ -325,17 +104,11 @@ export const addSkill = async (skillData) => {
 }
 
 export const getSessions = async (skillId) => {
-  if (isDemoUser()) {
-    await new Promise(resolve => setTimeout(resolve, 300))
-    return SEED_SESSIONS.filter(s => s.skillId === skillId)
-  }
   try {
     const res = await fetch(`${API_BASE}/sessions?skillId=${skillId}`, { headers: authHeaders() })
     const data = await res.json()
     if (!res.ok) throw new Error(data.message)
-    // Backend uses paginated() → { success, data: [...], pagination: {...} }
     const sessions = Array.isArray(data.data) ? data.data : []
-    // Map snake_case to camelCase for consistency
     return sessions.map(s => ({
       ...s,
       skillId: s.skill_id || s.skillId,
@@ -354,23 +127,6 @@ export const getSessions = async (skillId) => {
 }
 
 export const createSession = async (sessionData) => {
-  if (isDemoUser()) {
-    await new Promise(resolve => setTimeout(resolve, 500))
-    const prevSessions = SEED_SESSIONS.filter(s => s.skillId === sessionData.skillId)
-    const prevHash = prevSessions.length > 0 ? prevSessions[prevSessions.length - 1].entryHash : null
-    const serverTs = new Date().toISOString()
-    const contentHash = computeContentHash(sessionData.notes, [], sessionData.durationSeconds, sessionData.topic)
-    const entryHash = computeEntryHash(prevHash, serverTs, contentHash, 1)
-    const newSession = {
-      id: SEED_SESSIONS.length + 1 + Math.floor(Math.random() * 10000),
-      ...sessionData,
-      userId: 1, clientTs: sessionData.clientTs || new Date().toISOString(),
-      serverTs, contentHash, prevHash, entryHash, deleted: false,
-      phase: 'Learning', difficulty: sessionData.difficulty || 'medium'
-    }
-    SEED_SESSIONS.push(newSession)
-    return newSession
-  }
   try {
     const res = await fetch(`${API_BASE}/sessions`, {
       method: 'POST',
@@ -379,7 +135,6 @@ export const createSession = async (sessionData) => {
     })
     const data = await res.json()
     if (!res.ok) throw new Error(data.message)
-    // Backend returns { success, data: { session: {...} } }
     return data.data?.session || data.data
   } catch (err) {
     console.error('createSession error:', err)
@@ -387,33 +142,28 @@ export const createSession = async (sessionData) => {
   }
 }
 
-export const getScoreBreakdown = async (skillId) => {
-  if (isDemoUser()) {
-    await new Promise(resolve => setTimeout(resolve, 300))
-    
-    const skill = SEED_SKILLS.find(s => s.id === skillId)
-    if (!skill) return null
-    
-    if (skill.category === 'coding') {
-      return {
-        consistency: { score: 85, weight: 30, description: '24 sessions in last 30 days' },
-        depth: { score: 72, weight: 25, description: 'Avg 150 LOC per session' },
-        progression: { score: 78, weight: 20, description: 'Steady improvement trend' },
-        externalProof: { score: 80, weight: 15, description: '12 GitHub commits linked' },
-        peerReview: { score: 65, weight: 10, description: '5 code reviews received' }
-      }
-    } else {
-      return {
-        revisionCount: { score: 88, weight: 30, description: '16 draft versions' },
-        depth: { score: 82, weight: 25, description: 'Avg 1200 words per session' },
-        consistency: { score: 91, weight: 20, description: '16 sessions in last 30 days' },
-        citations: { score: 75, weight: 15, description: '24 sources referenced' },
-        externalFeedback: { score: 70, weight: 10, description: '3 peer reviews' }
-      }
-    }
+export const uploadSessionProofFile = async (skillId, file) => {
+  try {
+    const formData = new FormData()
+    formData.append('skillId', skillId)
+    formData.append('file', file)
+
+    const res = await fetch(`${API_BASE}/sessions/upload-proof`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: formData,
+    })
+
+    const data = await res.json()
+    if (!res.ok) throw new Error(data.message || 'Failed to upload file')
+    return data.data
+  } catch (err) {
+    console.error('uploadSessionProofFile error:', err)
+    throw err
   }
-  
-  // Real user: fetch from backend
+}
+
+export const getScoreBreakdown = async (skillId) => {
   try {
     const res = await fetch(`${API_BASE}/analytics/score/${skillId}`, { headers: authHeaders() })
     const data = await res.json()
@@ -421,7 +171,6 @@ export const getScoreBreakdown = async (skillId) => {
     return data.data?.breakdown || data.data
   } catch (err) {
     console.error('getScoreBreakdown error:', err)
-    // Return a fallback structure so the UI doesn't break
     return {
       consistency: { score: 0, weight: 30, description: 'No data yet' },
       depth: { score: 0, weight: 25, description: 'No data yet' },
@@ -433,42 +182,6 @@ export const getScoreBreakdown = async (skillId) => {
 }
 
 export const getActivityHeatmap = async (skillId) => {
-  if (isDemoUser()) {
-    await new Promise(resolve => setTimeout(resolve, 300))
-    
-    // Filter seed sessions by skillId if provided
-    const relevantSessions = skillId
-      ? SEED_SESSIONS.filter(s => s.skillId === skillId)
-      : SEED_SESSIONS
-
-    const weeks = []
-    const startDate = new Date()
-    startDate.setDate(startDate.getDate() - 90)
-    
-    for (let i = 0; i < 13; i++) {
-      const weekData = []
-      for (let j = 0; j < 7; j++) {
-        const date = new Date(startDate)
-        date.setDate(date.getDate() + i * 7 + j)
-        
-        const sessionsOnDay = relevantSessions.filter(s => {
-          const sessionDate = new Date(s.clientTs)
-          return sessionDate.toDateString() === date.toDateString()
-        })
-        
-        weekData.push({
-          date: date.toISOString().split('T')[0],
-          count: sessionsOnDay.length,
-          sessions: sessionsOnDay
-        })
-      }
-      weeks.push(weekData)
-    }
-    
-    return weeks
-  }
-  
-  // Real user: fetch from backend
   try {
     const url = new URL(`${API_BASE}/analytics/heatmap`)
     if (skillId) url.searchParams.set('skillId', skillId)
@@ -482,16 +195,15 @@ export const getActivityHeatmap = async (skillId) => {
   }
 }
 
-// ─── GITHUB ──────────────────────────────────────────────────────────────────
-
 export const getGitHubStatus = async () => {
-  if (isDemoUser()) return { connected: false, connection: null }
   try {
     const res = await fetch(`${API_BASE}/github/status`, { headers: authHeaders() })
     const data = await res.json()
     if (!res.ok) return { connected: false, connection: null }
     return data.data
-  } catch { return { connected: false, connection: null } }
+  } catch {
+    return { connected: false, connection: null }
+  }
 }
 
 export const getGitHubAuthUrl = () => {
@@ -500,7 +212,6 @@ export const getGitHubAuthUrl = () => {
 }
 
 export const getGitHubRepos = async () => {
-  if (isDemoUser()) return []
   try {
     const res = await fetch(`${API_BASE}/github/repos`, { headers: authHeaders() })
     const data = await res.json()
@@ -513,7 +224,6 @@ export const getGitHubRepos = async () => {
 }
 
 export const getGitHubTree = async (owner, repo) => {
-  if (isDemoUser()) return { tree: [], flatTree: [], branch: 'main' }
   try {
     const res = await fetch(`${API_BASE}/github/tree/${owner}/${repo}`, { headers: authHeaders() })
     const data = await res.json()
@@ -525,8 +235,6 @@ export const getGitHubTree = async (owner, repo) => {
   }
 }
 
-// Lightweight helper — returns the default branch name for a repo
-// Reuses the tree endpoint (which already fetches repo info to get the branch).
 export const getGitHubDefaultBranch = async (owner, repo) => {
   try {
     const result = await getGitHubTree(owner, repo)
@@ -537,7 +245,6 @@ export const getGitHubDefaultBranch = async (owner, repo) => {
 }
 
 export const disconnectGitHub = async () => {
-  if (isDemoUser()) return
   try {
     const res = await fetch(`${API_BASE}/github/disconnect`, {
       method: 'DELETE',
@@ -551,7 +258,6 @@ export const disconnectGitHub = async () => {
 }
 
 export const getGitHubFile = async (owner, repo, path) => {
-  if (isDemoUser()) return { content: '// Demo mode — real file content unavailable' }
   try {
     const res = await fetch(
       `${API_BASE}/github/file/${owner}/${repo}?path=${encodeURIComponent(path)}`,
@@ -567,7 +273,6 @@ export const getGitHubFile = async (owner, repo, path) => {
 }
 
 export const saveSelectedRepos = async (selectedRepos) => {
-  if (isDemoUser()) return { selectedRepos }
   try {
     const res = await fetch(`${API_BASE}/github/selected-repos`, {
       method: 'PATCH',
@@ -584,17 +289,6 @@ export const saveSelectedRepos = async (selectedRepos) => {
 }
 
 export const generateCapsuleToken = async (skillId) => {
-  if (isDemoUser()) {
-    await new Promise(resolve => setTimeout(resolve, 500))
-    const token = Math.random().toString(36).substring(2, 15)
-    return {
-      token,
-      url: `${window.location.origin}/capsule/${token}`,
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
-    }
-  }
-  
-  // Real user: call backend
   try {
     const res = await fetch(`${API_BASE}/capsule/generate`, {
       method: 'POST',
@@ -610,7 +304,6 @@ export const generateCapsuleToken = async (skillId) => {
   }
 }
 
-// Fetch capsule data by token (public — no auth needed)
 export const getCapsuleByToken = async (token) => {
   try {
     const res = await fetch(`${API_BASE}/capsule/${token}`)
@@ -623,11 +316,7 @@ export const getCapsuleByToken = async (token) => {
   }
 }
 
-// Fetch capsule link history for a skill
 export const getCapsuleHistory = async (skillId) => {
-  if (isDemoUser()) {
-    return { history: [] }
-  }
   try {
     const res = await fetch(`${API_BASE}/capsule/history/${skillId}`, {
       headers: authHeaders(),
@@ -641,21 +330,7 @@ export const getCapsuleHistory = async (skillId) => {
   }
 }
 
-// Generate LinkedIn certificate
 export const generateCertificate = async (skillId) => {
-  if (isDemoUser()) {
-    await new Promise(resolve => setTimeout(resolve, 500))
-    const certToken = Math.random().toString(36).substring(2, 15)
-    return {
-      certToken,
-      url: `${window.location.origin}/certificate/${certToken}`,
-      imageUrl: `${window.location.origin}/api/capsule/certificate/${certToken}/image`,
-      issuedAt: new Date().toISOString(),
-      linkedInShareUrl: `https://www.linkedin.com/profile/add?startTask=CERTIFICATION_NAME&name=Demo%20Skill%20Certificate&organizationName=Skill%20Ledger`
-    }
-  }
-  
-  // Real user: call backend
   try {
     const res = await fetch(`${API_BASE}/capsule/certificate`, {
       method: 'POST',
@@ -671,14 +346,7 @@ export const generateCertificate = async (skillId) => {
   }
 }
 
-// Get skill with linked repos
 export const getSkillWithRepos = async (skillId) => {
-  if (isDemoUser()) {
-    await new Promise(resolve => setTimeout(resolve, 200))
-    const skill = SEED_SKILLS.find(s => s.id === skillId)
-    return skill ? { ...skill, linkedRepos: [] } : null
-  }
-  
   try {
     const res = await fetch(`${API_BASE}/skills/${skillId}`, { headers: authHeaders() })
     const data = await res.json()
@@ -690,13 +358,7 @@ export const getSkillWithRepos = async (skillId) => {
   }
 }
 
-// Update skill linked repos
 export const updateSkillRepos = async (skillId, linkedRepo) => {
-  if (isDemoUser()) {
-    await new Promise(resolve => setTimeout(resolve, 300))
-    return { success: true }
-  }
-  
   try {
     const res = await fetch(`${API_BASE}/skills/${skillId}`, {
       method: 'PATCH',
@@ -712,16 +374,10 @@ export const updateSkillRepos = async (skillId, linkedRepo) => {
   }
 }
 
-// Check if repo has linked sessions (for safe removal)
 export const checkRepoUsage = async (skillId, repoFullName) => {
-  if (isDemoUser()) {
-    await new Promise(resolve => setTimeout(resolve, 200))
-    return { hasLinkedSessions: false }
-  }
-  
   try {
-    const res = await fetch(`${API_BASE}/skills/${skillId}/repo-usage?repo=${encodeURIComponent(repoFullName)}`, { 
-      headers: authHeaders() 
+    const res = await fetch(`${API_BASE}/skills/${skillId}/repo-usage?repo=${encodeURIComponent(repoFullName)}`, {
+      headers: authHeaders()
     })
     const data = await res.json()
     if (!res.ok) throw new Error(data.message)

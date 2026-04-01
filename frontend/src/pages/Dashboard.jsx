@@ -1,18 +1,39 @@
-import React, { useState, useEffect, useMemo, useCallback, lazy, Suspense } from 'react'
+import React, { useEffect, useMemo, useState, lazy, Suspense } from 'react'
 import { motion } from 'framer-motion'
-import { 
-  Shield, Plus, LogOut, TrendingUp, Clock, 
-  Calendar, Share2, BarChart3, FileText, Eye, Github, ChevronRight, Paperclip, Lock
+import {
+  Shield,
+  Plus,
+  LogOut,
+  TrendingUp,
+  Clock,
+  Calendar,
+  Share2,
+  BarChart3,
+  FileText,
+  Eye,
+  Github,
+  ChevronRight,
+  Paperclip,
+  Activity,
+  Sparkles,
+  Target,
+  Layers,
+  Flame,
+  Trash2,
 } from 'lucide-react'
-import { getSkills, getSessions, createSession, getScoreBreakdown, getActivityHeatmap, addSkill, deleteSkill, getGitHubStatus, disconnectGitHub } from '../services/api'
+import {
+  getSkills,
+  getSessions,
+  createSession,
+  getScoreBreakdown,
+  getActivityHeatmap,
+  addSkill,
+  deleteSkill,
+  getGitHubStatus,
+} from '../services/api'
 import { formatDuration, formatDate, getScoreLabel, getPhaseColor } from '../utils/helpers'
-import { useDebouncedCallback } from '../utils/hooks'
-
-// Import subcomponents
-import SkillCard from '../components/dashboard/SkillCard'
 import SessionLogger from '../components/dashboard/SessionLogger'
 
-// Lazy load heavy dashboard sub-views
 const Timeline = lazy(() => import('../components/dashboard/Timeline'))
 const ActivityHeatmap = lazy(() => import('../components/dashboard/ActivityHeatmap'))
 const ScoreBreakdown = lazy(() => import('../components/dashboard/ScoreBreakdown'))
@@ -22,28 +43,15 @@ const GitHubConnect = lazy(() => import('../components/dashboard/GitHubConnect')
 const SessionDetail = lazy(() => import('../components/dashboard/SessionDetail'))
 
 const SubViewLoader = () => (
-  <div className="glass-card glass-glow rounded-2xl p-12 flex items-center justify-center">
-    <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary-500/20 border-t-primary-500" />
+  <div className="rounded-3xl border border-white/10 bg-white/5 p-12 flex items-center justify-center">
+    <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary-500/25 border-t-primary-500" />
   </div>
 )
 
-const DEMO_EMAILS = ['demo@skillledger.com', 'test@skillledger.com']
-
 const Dashboard = ({ user, onLogout }) => {
-  const isDemo = DEMO_EMAILS.includes(user?.email)
-
-  // Load from sessionStorage ONLY for demo users
-  const [skills, setSkills] = useState(() => {
-    if (!isDemo) return []
-    const saved = sessionStorage.getItem('skillLedgerSkills')
-    return saved ? JSON.parse(saved) : []
-  })
+  const [skills, setSkills] = useState([])
   const [selectedSkill, setSelectedSkill] = useState(null)
-  const [sessions, setSessions] = useState(() => {
-    if (!isDemo) return []
-    const saved = sessionStorage.getItem('skillLedgerSessions')
-    return saved ? JSON.parse(saved) : []
-  })
+  const [sessions, setSessions] = useState([])
   const [loading, setLoading] = useState(true)
   const [showSessionLogger, setShowSessionLogger] = useState(false)
   const [showAddSkill, setShowAddSkill] = useState(false)
@@ -52,31 +60,15 @@ const Dashboard = ({ user, onLogout }) => {
   const [activeView, setActiveView] = useState('overview')
   const [heatmapData, setHeatmapData] = useState([])
   const [scoreData, setScoreData] = useState(null)
-  
-  // GitHub state
   const [githubConnected, setGithubConnected] = useState(false)
   const [githubLogin, setGithubLogin] = useState(null)
   const [availableRepos, setAvailableRepos] = useState([])
-
-  // Save to sessionStorage whenever skills or sessions change
-  useEffect(() => {
-    if (skills.length > 0) {
-      sessionStorage.setItem('skillLedgerSkills', JSON.stringify(skills))
-    }
-  }, [skills])
-
-  useEffect(() => {
-    if (sessions.length > 0) {
-      sessionStorage.setItem('skillLedgerSessions', JSON.stringify(sessions))
-    }
-  }, [sessions])
 
   useEffect(() => {
     loadInitialData()
     loadGitHubStatus()
   }, [])
 
-  // Check for ?github=connected after OAuth redirect
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     if (params.get('github') === 'connected') {
@@ -86,12 +78,11 @@ const Dashboard = ({ user, onLogout }) => {
   }, [])
 
   useEffect(() => {
-    if (selectedSkill) {
-      loadSessions(selectedSkill.id)
-      if (activeView === 'score') {
-        setScoreData(null) // Reset to show loading state
-        loadScoreBreakdown(selectedSkill.id)
-      }
+    if (!selectedSkill) return
+    loadSessions(selectedSkill.id)
+    if (activeView === 'score') {
+      setScoreData(null)
+      loadScoreBreakdown(selectedSkill.id)
     }
   }, [selectedSkill, activeView])
 
@@ -103,20 +94,6 @@ const Dashboard = ({ user, onLogout }) => {
 
   const loadInitialData = async () => {
     try {
-      if (isDemo) {
-        // Demo users: try sessionStorage cache first
-        const savedSkills = sessionStorage.getItem('skillLedgerSkills')
-        const savedSessions = sessionStorage.getItem('skillLedgerSessions')
-        if (savedSkills && savedSessions) {
-          const parsedSkills = JSON.parse(savedSkills)
-          const parsedSessions = JSON.parse(savedSessions)
-          setSkills(parsedSkills)
-          setSessions(parsedSessions)
-          if (parsedSkills.length > 0) setSelectedSkill(parsedSkills[0])
-          return
-        }
-      }
-      // Real users (and demo fallback): always fetch from API
       const data = await getSkills()
       const safeSkills = Array.isArray(data) ? data : []
       setSkills(safeSkills)
@@ -130,27 +107,21 @@ const Dashboard = ({ user, onLogout }) => {
 
   const loadSessions = async (skillId) => {
     try {
-      if (isDemo) {
-        const savedSessions = sessionStorage.getItem('skillLedgerSessions')
-        if (savedSessions) {
-          const allSessions = JSON.parse(savedSessions)
-          setSessions(allSessions.filter(s => s.skillId === skillId))
-          return
-        }
-      }
       const data = await getSessions(skillId)
-      setSessions(data)
+      setSessions(Array.isArray(data) ? data : [])
     } catch (error) {
       console.error('Failed to load sessions:', error)
+      setSessions([])
     }
   }
 
   const loadHeatmap = async (skillId) => {
     try {
       const data = await getActivityHeatmap(skillId)
-      setHeatmapData(data)
+      setHeatmapData(Array.isArray(data) ? data : [])
     } catch (error) {
       console.error('Failed to load heatmap:', error)
+      setHeatmapData([])
     }
   }
 
@@ -168,17 +139,20 @@ const Dashboard = ({ user, onLogout }) => {
     if (!newSkill) return
     const updatedSkills = [...skills, newSkill]
     setSkills(updatedSkills)
-    if (isDemo) sessionStorage.setItem('skillLedgerSkills', JSON.stringify(updatedSkills))
     setSelectedSkill(newSkill)
     setShowAddSkill(false)
   }
 
-  const handleDeleteSkill = async (skillId) => {
-    await deleteSkill(skillId) // throws on error — SkillCard handles it
-    const updatedSkills = skills.filter(s => s.id !== skillId)
+  const handleDeleteSkill = async (skill) => {
+    const sessionCount = skill.totalSessions ?? skill.total_sessions ?? 0
+    if (sessionCount > 0) return
+    const confirmed = window.confirm(`Delete "${skill.name}"? This cannot be undone.`)
+    if (!confirmed) return
+
+    await deleteSkill(skill.id)
+    const updatedSkills = skills.filter((item) => item.id !== skill.id)
     setSkills(updatedSkills)
-    if (isDemo) sessionStorage.setItem('skillLedgerSkills', JSON.stringify(updatedSkills))
-    if (selectedSkill?.id === skillId) {
+    if (selectedSkill?.id === skill.id) {
       setSelectedSkill(updatedSkills.length > 0 ? updatedSkills[0] : null)
     }
   }
@@ -188,493 +162,423 @@ const Dashboard = ({ user, onLogout }) => {
       const status = await getGitHubStatus()
       setGithubConnected(status.connected)
       setGithubLogin(status.connection?.github_login || null)
-      // Use only the repos the user has explicitly selected
       setAvailableRepos(status.selectedRepos || [])
     } catch {
-      // silently fail — GitHub is optional
     }
   }
 
   const handleGitHubConnect = (selectedRepos) => {
-    // selectedRepos = null means disconnect happened inside the modal
     if (selectedRepos === null) {
       setGithubConnected(false)
       setGithubLogin(null)
       setAvailableRepos([])
-    } else {
-      // User saved a new selection — update available repos
-      setAvailableRepos(selectedRepos)
+      return
     }
+    setAvailableRepos(selectedRepos)
   }
 
   const handleCreateSession = async (sessionData) => {
     try {
-      const newSession = await createSession(sessionData)
-
-      if (isDemo) {
-        // Demo: persist in sessionStorage
-        const allSavedSessions = JSON.parse(sessionStorage.getItem('skillLedgerSessions') || '[]')
-        sessionStorage.setItem('skillLedgerSessions', JSON.stringify([...allSavedSessions, newSession]))
-      }
-
-      // Refresh sessions from source
+      await createSession(sessionData)
       await loadSessions(sessionData.skillId)
 
-      // Update skill stats in sidebar
-      const updatedSkills = skills.map(skill => {
-        if (skill.id === sessionData.skillId) {
-          return {
-            ...skill,
-            totalSessions: (skill.totalSessions || 0) + 1,
-            totalHours: Math.round(((skill.totalHours || 0) + sessionData.durationSeconds / 3600) * 10) / 10
-          }
+      const updatedSkills = skills.map((skill) => {
+        if (skill.id !== sessionData.skillId) return skill
+        return {
+          ...skill,
+          totalSessions: (skill.totalSessions || 0) + 1,
+          totalHours: Math.round(((skill.totalHours || 0) + sessionData.durationSeconds / 3600) * 10) / 10,
         }
-        return skill
       })
-      setSkills(updatedSkills)
-      if (isDemo) sessionStorage.setItem('skillLedgerSkills', JSON.stringify(updatedSkills))
 
+      setSkills(updatedSkills)
       setShowSessionLogger(false)
     } catch (error) {
       console.error('Failed to create session:', error)
+      throw error
     }
   }
 
+  const sortedSessions = useMemo(
+    () => [...sessions].sort((a, b) => new Date(b.clientTs) - new Date(a.clientTs)),
+    [sessions]
+  )
+
+  const metrics = useMemo(() => {
+    if (!selectedSkill) {
+      return {
+        totalSessions: 0,
+        totalHours: 0,
+        consistency: 0,
+        score: 0,
+      }
+    }
+
+    return {
+      totalSessions: selectedSkill.totalSessions ?? selectedSkill.total_sessions ?? 0,
+      totalHours: selectedSkill.totalHours ?? selectedSkill.total_hours ?? 0,
+      consistency: selectedSkill.consistencyScore ?? 0,
+      score: selectedSkill.score ?? 0,
+    }
+  }, [selectedSkill])
+
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#0c0a13]">
+      <div className="min-h-screen flex items-center justify-center bg-[#090812]">
         <div className="relative">
-          <div className="animate-spin rounded-full h-12 w-12 border-2 border-primary-500/20 border-t-primary-500"></div>
-          <div className="absolute inset-0 rounded-full blur-md bg-primary-500/20"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-2 border-primary-500/25 border-t-primary-500" />
+          <div className="absolute inset-0 rounded-full blur-md bg-primary-500/20" />
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-[#0c0a13] animated-gradient-bg">
-      {/* Top Navigation */}
-      <nav className="frosted-nav sticky top-0 z-40">
-        <div className="container mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="relative">
-                <div className="w-9 h-9 bg-gradient-to-br from-primary-400 to-primary-600 rounded-xl flex items-center justify-center shadow-lg shadow-primary-500/20">
-                  <Shield className="w-5 h-5 text-white" />
-                </div>
-                <div className="absolute -inset-1 bg-primary-500/15 rounded-xl blur-md -z-10" />
+    <div className="min-h-screen bg-[#090812] relative overflow-hidden">
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute -top-24 -left-12 w-[420px] h-[420px] rounded-full bg-primary-600/10 blur-3xl" />
+        <div className="absolute top-1/2 -right-20 w-[380px] h-[380px] rounded-full bg-violet-500/10 blur-3xl" />
+        <div className="absolute bottom-0 left-1/3 w-[500px] h-[280px] bg-gradient-to-r from-transparent via-primary-500/6 to-transparent blur-3xl" />
+      </div>
+
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
+        <div className="rounded-3xl border border-white/10 bg-gradient-to-r from-white/[0.07] to-white/[0.03] p-5 sm:p-6">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
+            <div className="flex items-start gap-4">
+              <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-primary-500 to-violet-500 flex items-center justify-center shadow-lg shadow-primary-500/30">
+                <Shield className="w-6 h-6 text-white" />
               </div>
-              <span className="text-2xl font-bold text-shimmer">Skill Ledger</span>
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">Skill Ledger Dashboard</h1>
+                <p className="text-sm text-gray-300 mt-1">
+                  {user?.display_name || user?.displayName || user?.email?.split('@')[0] || 'User'} • {skills.length} tracked skill{skills.length !== 1 ? 's' : ''}
+                </p>
+              </div>
             </div>
 
-            <div className="flex items-center space-x-4">
-              <div className="text-right mr-4">
-                <div className="text-sm font-semibold text-white">{user?.display_name || user?.displayName || user?.email?.split('@')[0] || 'User'}</div>
-                <div className="text-xs text-gray-500">{user?.email ? user.email.replace(/^(.{2})(.*)(@.*)$/, (_, a, b, c) => a + '\u2022'.repeat(Math.min(b.length, 5)) + c) : ''}</div>
-              </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                onClick={() => setShowSessionLogger(true)}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-primary-500 to-violet-500 text-white font-semibold hover:opacity-95 transition-opacity"
+              >
+                <Plus className="w-4 h-4" />
+                Log Session
+              </button>
+              <button
+                onClick={() => setShowAddSkill(true)}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-primary-400/30 text-primary-200 hover:bg-primary-500/10 transition-colors"
+              >
+                <Sparkles className="w-4 h-4" />
+                Add Skill
+              </button>
               <button
                 onClick={onLogout}
-                className="flex items-center space-x-2 px-4 py-2 text-gray-400 hover:text-red-400 glass rounded-xl hover:border-red-500/20 hover:bg-red-500/5 transition-all duration-300"
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-white/15 text-gray-300 hover:text-red-300 hover:border-red-400/30 hover:bg-red-500/10 transition-colors"
               >
-                <LogOut className="w-5 h-5" />
-                <span>Logout</span>
+                <LogOut className="w-4 h-4" />
+                Logout
               </button>
             </div>
           </div>
         </div>
-      </nav>
 
-      <div className="container mx-auto px-6 py-8">
-        <div className="grid lg:grid-cols-4 gap-6">
-          {/* Sidebar */}
-          <div className="lg:col-span-1 space-y-6">
-            {/* Skills List */}
-            <div className="glass-card glass-glow p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-lg font-bold text-white">My Skills</h2>
-                <button 
-                  onClick={() => setShowAddSkill(true)}
-                  className="w-8 h-8 bg-gradient-to-br from-primary-500 to-primary-600 hover:from-primary-400 hover:to-primary-500 text-white rounded-lg flex items-center justify-center transition-all shadow-lg shadow-primary-500/30 hover:shadow-primary-500/50"
-                  title="Add New Skill"
-                >
-                  <Plus className="w-5 h-5" />
-                </button>
+        <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+          <aside className="xl:col-span-4 space-y-6">
+            <section className="rounded-3xl border border-white/10 bg-white/[0.04] p-5">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-base font-semibold text-white">Skills</h2>
+                <span className="text-xs px-2 py-1 rounded-lg bg-white/10 text-gray-300">{skills.length}</span>
               </div>
 
               {skills.length === 0 ? (
-                <div className="text-center py-8">
-                  <p className="text-gray-400 text-sm mb-4">No skills yet</p>
-                  <button
-                    onClick={() => setShowAddSkill(true)}
-                    className="btn-primary text-sm"
-                  >
-                    <Plus className="w-4 h-4 inline mr-2" />
-                    Add Your First Skill
+                <div className="rounded-2xl border border-dashed border-white/20 bg-white/[0.03] p-6 text-center">
+                  <p className="text-sm text-gray-400 mb-3">No skills added yet</p>
+                  <button onClick={() => setShowAddSkill(true)} className="btn-primary text-sm">
+                    <Plus className="w-4 h-4" />
+                    Add your first skill
                   </button>
                 </div>
               ) : (
-                <div className="space-y-3">
-                  {skills.map(skill => (
-                    <SkillCard
-                      key={skill.id}
-                      skill={skill}
-                      isSelected={selectedSkill?.id === skill.id}
-                      onClick={() => setSelectedSkill(skill)}
-                      onDelete={handleDeleteSkill}
-                    />
-                  ))}
+                <div className="space-y-3 max-h-[430px] overflow-y-auto pr-1">
+                  {skills.map((skill) => {
+                    const isSelected = selectedSkill?.id === skill.id
+                    const canDelete = (skill.totalSessions ?? skill.total_sessions ?? 0) === 0
+                    const score = skill.score ?? 0
+                    return (
+                      <button
+                        key={skill.id}
+                        onClick={() => setSelectedSkill(skill)}
+                        className={`w-full text-left p-4 rounded-2xl border transition-all duration-200 ${
+                          isSelected
+                            ? 'border-primary-400/40 bg-primary-500/10'
+                            : 'border-white/10 bg-white/[0.03] hover:bg-white/[0.06] hover:border-white/20'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="text-sm font-semibold text-white truncate">{skill.name}</div>
+                            <div className="text-xs text-gray-400 mt-1">
+                              {(skill.totalSessions ?? skill.total_sessions ?? 0)} sessions • {skill.totalHours ?? skill.total_hours ?? 0}h
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-semibold px-2 py-1 rounded-lg bg-white/10 text-white">{score}</span>
+                            {canDelete && (
+                              <span
+                                onClick={(event) => {
+                                  event.stopPropagation()
+                                  handleDeleteSkill(skill)
+                                }}
+                                className="p-1 rounded-lg hover:bg-red-500/20 text-gray-400 hover:text-red-300"
+                                role="button"
+                                tabIndex={0}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </button>
+                    )
+                  })}
                 </div>
               )}
-            </div>
+            </section>
 
-            {/* Quick Actions */}
-            <div className="glass-card glass-glow p-6">
-              <h3 className="text-sm font-semibold text-gray-400 mb-4 uppercase tracking-wider">Quick Actions</h3>
-              <div className="space-y-2">
-                <button
-                  onClick={() => setShowSessionLogger(true)}
-                  className="w-full btn-primary text-sm py-2"
-                >
-                  <Plus className="w-4 h-4 inline mr-2" />
-                  Log Session
-                </button>
-                <button
-                  onClick={() => { if (selectedSkill) setActiveView('capsule') }}
-                  disabled={!selectedSkill}
-                  className="w-full btn-secondary text-sm py-2 disabled:opacity-30 disabled:cursor-not-allowed"
-                >
-                  <Share2 className="w-4 h-4 inline mr-2" />
-                  Share Capsule
+            <section className="rounded-3xl border border-white/10 bg-white/[0.04] p-5 space-y-3">
+              <h3 className="text-sm font-semibold text-gray-300 uppercase tracking-[0.14em]">Quick Actions</h3>
+              <button onClick={() => setShowSessionLogger(true)} className="w-full btn-primary text-sm py-2.5">
+                <Plus className="w-4 h-4" />
+                Log Session
+              </button>
+              <button
+                onClick={() => {
+                  if (selectedSkill) setActiveView('capsule')
+                }}
+                disabled={!selectedSkill}
+                className="w-full inline-flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-sm text-gray-200 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-white/10 transition-colors"
+              >
+                <Share2 className="w-4 h-4" />
+                Share Capsule
+              </button>
+              <button
+                onClick={() => setShowGitHubConnect(true)}
+                className="w-full inline-flex items-center justify-center gap-2 rounded-xl border border-primary-400/25 bg-primary-500/10 px-4 py-2.5 text-sm text-primary-200 hover:bg-primary-500/20 transition-colors"
+              >
+                <Github className="w-4 h-4" />
+                {githubConnected ? 'Manage GitHub' : 'Connect GitHub'}
+              </button>
+            </section>
+
+            <section className="rounded-3xl border border-white/10 bg-white/[0.04] p-5">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-semibold text-gray-300 uppercase tracking-[0.14em]">GitHub Status</h3>
+                <Github className="w-4 h-4 text-gray-400" />
+              </div>
+              {githubConnected ? (
+                <>
+                  <p className="text-sm text-emerald-300 font-medium">Connected {githubLogin ? `as @${githubLogin}` : ''}</p>
+                  <p className="text-xs text-gray-400 mt-1">{availableRepos.length} selected repositories for proof links</p>
+                </>
+              ) : (
+                <p className="text-sm text-gray-400">No GitHub account linked yet.</p>
+              )}
+            </section>
+          </aside>
+
+          <main className="xl:col-span-8 space-y-6">
+            {!selectedSkill && skills.length === 0 && (
+              <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-10 sm:p-14 text-center">
+                <div className="w-16 h-16 rounded-2xl mx-auto bg-primary-500/15 border border-primary-500/25 flex items-center justify-center mb-5">
+                  <TrendingUp className="w-8 h-8 text-primary-300" />
+                </div>
+                <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">Start your first learning track</h2>
+                <p className="text-gray-400 max-w-xl mx-auto mb-6">Create a skill and begin logging focused sessions. Your consistency, score, and activity timeline update automatically.</p>
+                <button onClick={() => setShowAddSkill(true)} className="btn-primary">
+                  <Plus className="w-4 h-4" />
+                  Add your first skill
                 </button>
               </div>
-            </div>
-
-            {/* GitHub Integration */}
-            <div className="glass-card glass-glow p-6">
-              <h3 className="text-sm font-semibold text-gray-400 mb-4 uppercase tracking-wider">GitHub Integration</h3>
-              {githubConnected ? (
-                <div className="space-y-3">
-                  <div className="text-sm text-emerald-300 bg-emerald-500/10 border border-emerald-500/15 p-3 rounded-xl shadow-lg shadow-emerald-500/5">
-                    <div className="flex items-center space-x-2 mb-1">
-                      <Github className="w-4 h-4" />
-                      <span className="font-medium">Connected</span>
-                    </div>
-                    {githubLogin && (
-                      <div className="text-xs text-emerald-400">@{githubLogin}</div>
-                    )}
-                    <div className="text-xs text-emerald-400/70 mt-1">
-                      {availableRepos.length} repositories available
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => setShowGitHubConnect(true)}
-                    className="w-full text-sm py-2 text-gray-500 hover:text-white transition-colors"
-                  >
-                    Manage / Disconnect
-                  </button>
-                </div>
-              ) : (
-                <button
-                  onClick={() => setShowGitHubConnect(true)}
-                  className="w-full flex items-center justify-center space-x-2 bg-white/5 border border-white/10 text-white py-2.5 rounded-xl hover:bg-white/10 transition-all text-sm"
-                >
-                  <Github className="w-4 h-4" />
-                  <span>Connect GitHub</span>
-                </button>
-              )}
-              <p className="text-xs text-gray-600 mt-3">
-                Link repos to attach code as proof of work
-              </p>
-            </div>
-          </div>
-
-          {/* Main Content */}
-          <div className="lg:col-span-3 space-y-6">
-
-            {/* Empty state for brand-new real users */}
-            {!selectedSkill && skills.length === 0 && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="glass-card glass-glow p-12 text-center"
-              >
-                <div className="w-20 h-20 bg-primary-500/10 border border-primary-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <TrendingUp className="w-10 h-10 text-primary-400" />
-                </div>
-                <h2 className="text-3xl font-bold text-white mb-3">
-                  Welcome, {user?.display_name || user?.displayName || user?.email?.split('@')[0]}! 🎉
-                </h2>
-                <p className="text-gray-400 text-lg mb-2">Your skill ledger is empty — and that's a great starting point.</p>
-                <p className="text-gray-500 mb-8 max-w-md mx-auto">
-                  Add your first skill to begin tracking your learning journey with verified, timestamped proof of your progress.
-                </p>
-                <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                  <button
-                    onClick={() => setShowAddSkill(true)}
-                    className="btn-primary flex items-center justify-center space-x-2 px-8 py-3 text-base"
-                  >
-                    <Plus className="w-5 h-5" />
-                    <span>Add Your First Skill</span>
-                  </button>
-                </div>
-                <div className="mt-10 grid grid-cols-3 gap-6 max-w-lg mx-auto text-center">
-                  {[
-                    { emoji: '🎯', label: 'Pick a skill', desc: 'Coding, writing, design, music…' },
-                    { emoji: '📝', label: 'Log sessions', desc: 'Record what you learn each day' },
-                    { emoji: '📈', label: 'Track progress', desc: 'Watch your score grow over time' },
-                  ].map(step => (
-                    <div key={step.label} className="p-4 glass rounded-xl">
-                      <div className="text-3xl mb-2">{step.emoji}</div>
-                      <div className="font-semibold text-white text-sm">{step.label}</div>
-                      <div className="text-gray-500 text-xs mt-1">{step.desc}</div>
-                    </div>
-                  ))}
-                </div>
-              </motion.div>
             )}
 
             {selectedSkill && (
               <>
-                {/* Skill Header */}
-                <div className="glass-card glass-glow p-6">
-                  <div className="flex items-start justify-between mb-4">
+                <section className="rounded-3xl border border-white/10 bg-gradient-to-br from-primary-500/12 via-transparent to-violet-500/10 p-5 sm:p-6">
+                  <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
                     <div>
-                      <h1 className="text-3xl font-bold text-white mb-2">
-                        {selectedSkill.name}
-                      </h1>
-                      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-gray-400">
-                        <span className="flex items-center">
-                          <Calendar className="w-4 h-4 mr-1" />
+                      <h2 className="text-3xl font-bold text-white leading-tight">{selectedSkill.name}</h2>
+                      <div className="flex flex-wrap items-center gap-3 mt-3 text-xs sm:text-sm text-gray-300">
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/10">
+                          <Calendar className="w-3.5 h-3.5" />
                           Started {formatDate(selectedSkill.createdAt || selectedSkill.created_at)}
                         </span>
-                        <span className="flex items-center">
-                          <FileText className="w-4 h-4 mr-1" />
-                          {selectedSkill.totalSessions || selectedSkill.total_sessions || 0} sessions
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/10">
+                          <FileText className="w-3.5 h-3.5" />
+                          {metrics.totalSessions} sessions
                         </span>
-                        <span className="flex items-center">
-                          <Clock className="w-4 h-4 mr-1" />
-                          {selectedSkill.totalHours || selectedSkill.total_hours || 0}h logged
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/10">
+                          <Clock className="w-3.5 h-3.5" />
+                          {metrics.totalHours}h logged
                         </span>
-                        {/* Show linked repo — resolve html_url from availableRepos */}
-                        {(selectedSkill.linked_repo_name || selectedSkill.linkedRepoName) && (() => {
-                          const storedId = selectedSkill.linked_repo_id || selectedSkill.linkedRepoId || ''
-                          const repoName = selectedSkill.linked_repo_name || selectedSkill.linkedRepoName
-                          // Look up the full repo object from availableRepos (has html_url)
-                          const repoObj = availableRepos.find(r =>
-                            r.full_name === storedId ||
-                            String(r.id) === String(storedId) ||
-                            r.name === repoName
-                          )
-                          const href = repoObj?.html_url ||
-                            (storedId.includes('/') ? `https://github.com/${storedId}` : null)
-                          if (!href) return (
-                            <span className="flex items-center text-primary-600">
-                              <Github className="w-4 h-4 mr-1" />
-                              {repoName}
-                            </span>
-                          )
-                          return (
-                            <a
-                              href={href}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex items-center text-primary-600 hover:text-primary-700 hover:underline transition-colors"
-                            >
-                              <Github className="w-4 h-4 mr-1" />
-                              {repoName}
-                            </a>
-                          )
-                        })()}
+                        {(selectedSkill.linked_repo_name || selectedSkill.linkedRepoName) && (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/10 text-primary-200">
+                            <Github className="w-3.5 h-3.5" />
+                            {selectedSkill.linked_repo_name || selectedSkill.linkedRepoName}
+                          </span>
+                        )}
                       </div>
                     </div>
-
                     <div className="text-right">
                       {(() => {
-                        const { label, color, bg } = getScoreLabel(selectedSkill.score)
+                        const { label, color, bg } = getScoreLabel(metrics.score)
                         return (
-                          <div className={`${bg} ${color} px-4 py-2 rounded-lg`}>
-                            <div className="text-3xl font-bold">{selectedSkill.score}</div>
-                            <div className="text-xs font-semibold">{label}</div>
+                          <div className={`${bg} ${color} rounded-2xl px-4 py-3 border border-white/10`}>
+                            <div className="text-3xl font-bold leading-none">{metrics.score}</div>
+                            <div className="text-xs mt-1 font-semibold uppercase tracking-wide">{label}</div>
                           </div>
                         )
                       })()}
                     </div>
                   </div>
 
-                  {/* View Tabs */}
-                  <div className="flex space-x-2 border-t border-white/5 pt-4 overflow-x-auto">
-                    {[
-                      { id: 'overview', label: 'Overview', icon: Eye },
-                      { id: 'timeline', label: 'Timeline', icon: TrendingUp },
-                      { id: 'heatmap', label: 'Heatmap', icon: Calendar },
-                      { id: 'score', label: 'Score', icon: BarChart3 },
-                      { id: 'capsule', label: 'Capsule', icon: Share2 }
-                    ].map(tab => (
-                      <button
-                        key={tab.id}
-                        onClick={() => setActiveView(tab.id)}
-                        className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl font-medium transition-all duration-300 whitespace-nowrap ${
-                          activeView === tab.id
-                            ? 'bg-gradient-to-r from-primary-500 to-primary-600 text-white shadow-lg shadow-primary-500/25'
-                            : 'text-gray-400 hover:text-white hover:bg-white/5'
-                        }`}
-                      >
-                        <tab.icon className="w-4 h-4" />
-                        <span>{tab.label}</span>
-                      </button>
-                    ))}
+                  <div className="mt-5 pt-5 border-t border-white/10">
+                    <div className="flex flex-wrap gap-2">
+                      {[
+                        { id: 'overview', label: 'Overview', icon: Eye },
+                        { id: 'timeline', label: 'Timeline', icon: Layers },
+                        { id: 'heatmap', label: 'Heatmap', icon: Activity },
+                        { id: 'score', label: 'Score', icon: BarChart3 },
+                        { id: 'capsule', label: 'Capsule', icon: Share2 },
+                      ].map((tab) => (
+                        <button
+                          key={tab.id}
+                          onClick={() => setActiveView(tab.id)}
+                          className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium border transition-all ${
+                            activeView === tab.id
+                              ? 'border-primary-400/40 bg-primary-500/20 text-white'
+                              : 'border-white/10 text-gray-300 hover:text-white hover:border-white/20 hover:bg-white/5'
+                          }`}
+                        >
+                          <tab.icon className="w-4 h-4" />
+                          {tab.label}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                </section>
 
-                {/* Dynamic Content based on activeView */}
                 {activeView === 'overview' && (
                   <div className="space-y-6">
-                    {/* Stats Grid */}
-                    <div className="grid md:grid-cols-3 gap-4">
-                      <motion.div 
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.1 }}
-                        className="stat-card p-6"
-                      >
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-gray-400 text-sm">Consistency</span>
-                          <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-                            <TrendingUp className="w-5 h-5 text-emerald-400" />
+                    <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+                      {[
+                        {
+                          label: 'Consistency',
+                          value: `${metrics.consistency}%`,
+                          hint: 'Last 30 days',
+                          icon: Target,
+                          color: 'text-emerald-300',
+                        },
+                        {
+                          label: 'Sessions',
+                          value: String(metrics.totalSessions),
+                          hint: 'All time',
+                          icon: FileText,
+                          color: 'text-sky-300',
+                        },
+                        {
+                          label: 'Hours',
+                          value: `${metrics.totalHours}h`,
+                          hint: 'Cumulative',
+                          icon: Clock,
+                          color: 'text-violet-300',
+                        },
+                        {
+                          label: 'Current streak',
+                          value: String(heatmapData.flat().reverse().findIndex((d) => d.count === 0) === -1 ? heatmapData.flat().length : heatmapData.flat().reverse().findIndex((d) => d.count === 0)),
+                          hint: 'From recent days',
+                          icon: Flame,
+                          color: 'text-orange-300',
+                        },
+                      ].map((item) => (
+                        <motion.div
+                          key={item.label}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="rounded-2xl border border-white/10 bg-white/[0.04] p-4"
+                        >
+                          <div className="flex items-center justify-between mb-3">
+                            <span className="text-xs uppercase tracking-[0.12em] text-gray-400">{item.label}</span>
+                            <item.icon className={`w-4 h-4 ${item.color}`} />
                           </div>
-                        </div>
-                        <div className="text-3xl font-bold text-white mb-1">
-                          {selectedSkill.consistencyScore}%
-                        </div>
-                        <div className="text-xs text-gray-500">Last 30 days</div>
-                        <div className="mt-3 h-1 bg-white/10 rounded-full overflow-hidden">
-                          <motion.div 
-                            initial={{ width: 0 }}
-                            animate={{ width: `${selectedSkill.consistencyScore}%` }}
-                            transition={{ delay: 0.5, duration: 1 }}
-                            className="h-full bg-gradient-to-r from-emerald-500 to-emerald-400 rounded-full"
-                          />
-                        </div>
-                      </motion.div>
+                          <div className="text-2xl font-bold text-white">{item.value}</div>
+                          <div className="text-xs text-gray-500 mt-1">{item.hint}</div>
+                        </motion.div>
+                      ))}
+                    </section>
 
-                      <motion.div 
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.2 }}
-                        className="stat-card p-6"
-                      >
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-gray-400 text-sm">Total Sessions</span>
-                          <div className="w-8 h-8 rounded-lg bg-sky-500/10 flex items-center justify-center">
-                            <FileText className="w-5 h-5 text-sky-400" />
-                          </div>
-                        </div>
-                        <div className="text-3xl font-bold text-white mb-1">
-                          {selectedSkill.totalSessions}
-                        </div>
-                        <div className="text-xs text-gray-500">All time</div>
-                      </motion.div>
-
-                      <motion.div 
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.3 }}
-                        className="stat-card p-6"
-                      >
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-gray-400 text-sm">Time Invested</span>
-                          <div className="w-8 h-8 rounded-lg bg-violet-500/10 flex items-center justify-center">
-                            <Clock className="w-5 h-5 text-violet-400" />
-                          </div>
-                        </div>
-                        <div className="text-3xl font-bold text-white mb-1">
-                          {selectedSkill.totalHours}h
-                        </div>
-                        <div className="text-xs text-gray-500">Cumulative</div>
-                      </motion.div>
-                    </div>
-
-                    {/* Recent Sessions */}
-                    <div className="glass-card glass-glow p-6">
-                      <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-xl font-bold text-white">Recent Sessions</h3>
-                        {sessions.length > 0 && (
+                    <section className="rounded-3xl border border-white/10 bg-white/[0.04] p-5 sm:p-6">
+                      <div className="flex items-center justify-between mb-5">
+                        <h3 className="text-xl font-semibold text-white">Recent Sessions</h3>
+                        {sortedSessions.length > 0 && (
                           <button
                             onClick={() => setActiveView('timeline')}
-                            className="flex items-center text-sm text-primary-600 hover:text-primary-700 font-medium transition-colors"
+                            className="inline-flex items-center gap-1 text-sm text-primary-300 hover:text-primary-200"
                           >
-                            View All
-                            <ChevronRight className="w-4 h-4 ml-1" />
+                            View timeline
+                            <ChevronRight className="w-4 h-4" />
                           </button>
                         )}
                       </div>
-                      {sessions.length === 0 ? (
-                        <div className="text-center py-12">
-                          <FileText className="w-12 h-12 text-gray-600 mx-auto mb-3" />
-                          <p className="text-gray-400 mb-4">No sessions logged yet</p>
-                          <button
-                            onClick={() => setShowSessionLogger(true)}
-                            className="btn-primary text-sm"
-                          >
-                            <Plus className="w-4 h-4 inline mr-2" />
-                            Log Your First Session
+
+                      {sortedSessions.length === 0 ? (
+                        <div className="rounded-2xl border border-dashed border-white/15 bg-white/[0.03] py-12 text-center">
+                          <FileText className="w-10 h-10 text-gray-500 mx-auto mb-3" />
+                          <p className="text-gray-400 mb-4">No sessions logged for this skill yet</p>
+                          <button onClick={() => setShowSessionLogger(true)} className="btn-primary text-sm">
+                            <Plus className="w-4 h-4" />
+                            Log first session
                           </button>
                         </div>
                       ) : (
                         <div className="space-y-3">
-                          {sessions
-                            .sort((a, b) => new Date(b.clientTs) - new Date(a.clientTs))
-                            .slice(0, 5)
-                            .map(session => (
-                            <motion.button
+                          {sortedSessions.slice(0, 6).map((session) => (
+                            <button
                               key={session.id}
-                              initial={{ opacity: 0, y: 10 }}
-                              animate={{ opacity: 1, y: 0 }}
                               onClick={() => setSelectedSession(session)}
-                              className="w-full text-left glass rounded-xl p-4 hover:bg-white/[0.06] hover:border-primary-500/20 transition-all duration-300 group"
+                              className="w-full text-left rounded-2xl border border-white/10 bg-white/[0.03] hover:bg-white/[0.06] hover:border-white/20 p-4 transition-colors"
                             >
-                              <div className="flex items-center justify-between">
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center space-x-2 mb-1">
-                                    <div className={`w-2 h-2 rounded-full ${getPhaseColor(session.phase)}`} />
+                              <div className="flex items-start justify-between gap-4">
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <span className={`w-2 h-2 rounded-full ${getPhaseColor(session.phase)}`} />
                                     <h4 className="font-semibold text-white truncate">{session.topic}</h4>
-                                    {session.difficulty && (
-                                      <span className={`text-xs px-2 py-0.5 rounded-full flex-shrink-0 ${
-                                        session.difficulty === 'easy' ? 'bg-green-100 text-green-700' :
-                                        session.difficulty === 'medium' ? 'bg-yellow-100 text-yellow-700' :
-                                        session.difficulty === 'hard' ? 'bg-orange-100 text-orange-700' :
-                                        'bg-red-100 text-red-700'
-                                      }`}>
-                                        {session.difficulty}
-                                      </span>
-                                    )}
                                   </div>
                                   {session.notes && (
-                                    <p className="text-sm text-gray-400 mb-2 line-clamp-2">
-                                      {session.notes.length > 100 ? `${session.notes.substring(0, 100)}...` : session.notes}
+                                    <p className="text-sm text-gray-400 mt-1 line-clamp-2">
+                                      {session.notes.length > 120 ? `${session.notes.slice(0, 120)}...` : session.notes}
                                     </p>
                                   )}
-                                  <div className="flex items-center space-x-3 text-xs text-gray-500">
-                                    <span className="flex items-center">
-                                      <Clock className="w-3 h-3 mr-1" />
+                                  <div className="mt-2 flex flex-wrap gap-3 text-xs text-gray-500">
+                                    <span className="inline-flex items-center gap-1">
+                                      <Clock className="w-3.5 h-3.5" />
                                       {formatDuration(session.durationSeconds)}
                                     </span>
                                     <span>{formatDate(session.clientTs)}</span>
-                                    {session.proofOfWork && session.proofOfWork.length > 0 && (
-                                      <span className="flex items-center text-primary-400">
-                                        <Paperclip className="w-3 h-3 mr-1" />
-                                        {session.proofOfWork.length} files
+                                    {session.proofOfWork?.length > 0 && (
+                                      <span className="inline-flex items-center gap-1 text-primary-300">
+                                        <Paperclip className="w-3.5 h-3.5" />
+                                        {session.proofOfWork.length} proof files
                                       </span>
                                     )}
                                   </div>
                                 </div>
-                                <ChevronRight className="w-5 h-5 text-gray-600 group-hover:text-primary-400 flex-shrink-0 transition-colors" />
+                                <ChevronRight className="w-5 h-5 text-gray-500 flex-shrink-0 mt-1" />
                               </div>
-                            </motion.button>
+                            </button>
                           ))}
                         </div>
                       )}
-                    </div>
+                    </section>
                   </div>
                 )}
 
@@ -703,11 +607,10 @@ const Dashboard = ({ user, onLogout }) => {
                 )}
               </>
             )}
-          </div>
+          </main>
         </div>
       </div>
 
-      {/* Session Logger Modal */}
       {showSessionLogger && (
         <SessionLogger
           onClose={() => setShowSessionLogger(false)}
@@ -719,7 +622,6 @@ const Dashboard = ({ user, onLogout }) => {
         />
       )}
 
-      {/* Add Skill Modal */}
       {showAddSkill && (
         <Suspense fallback={null}>
           <AddSkillModal
@@ -731,11 +633,13 @@ const Dashboard = ({ user, onLogout }) => {
         </Suspense>
       )}
 
-      {/* GitHub Connect Modal */}
       {showGitHubConnect && (
         <Suspense fallback={null}>
           <GitHubConnect
-            onClose={() => { setShowGitHubConnect(false); loadGitHubStatus() }}
+            onClose={() => {
+              setShowGitHubConnect(false)
+              loadGitHubStatus()
+            }}
             onConnect={handleGitHubConnect}
             githubConnected={githubConnected}
             githubLogin={githubLogin}
@@ -745,13 +649,9 @@ const Dashboard = ({ user, onLogout }) => {
         </Suspense>
       )}
 
-      {/* Session Detail Modal */}
       {selectedSession && (
         <Suspense fallback={null}>
-          <SessionDetail
-            session={selectedSession}
-            onClose={() => setSelectedSession(null)}
-          />
+          <SessionDetail session={selectedSession} onClose={() => setSelectedSession(null)} />
         </Suspense>
       )}
     </div>
@@ -759,5 +659,3 @@ const Dashboard = ({ user, onLogout }) => {
 }
 
 export default Dashboard
-
-
