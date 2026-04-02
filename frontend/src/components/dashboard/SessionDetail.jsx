@@ -20,8 +20,9 @@ const SessionDetail = ({ onClose, session }) => {
 
   const getFileIcon = (proof) => {
     if (proof.type === 'github') return <FileCode className="w-5 h-5 text-blue-600" />
-    if (proof.fileType?.startsWith('image/')) return <Image className="w-5 h-5 text-green-600" />
-    if (proof.fileType?.includes('pdf')) return <FileText className="w-5 h-5 text-red-600" />
+    const mimeType = proof.fileType || proof.file_type
+    if (mimeType?.startsWith('image/')) return <Image className="w-5 h-5 text-green-600" />
+    if (mimeType?.includes('pdf')) return <FileText className="w-5 h-5 text-red-600" />
     return <FileText className="w-5 h-5 text-gray-600" />
   }
 
@@ -33,6 +34,16 @@ const SessionDetail = ({ onClose, session }) => {
       case 'expert': return 'bg-red-500/10 text-red-400 border-red-500/30'
       default: return 'bg-white/5 text-gray-400 border-white/10'
     }
+  }
+
+  const getFileViewUrl = (file) => file.file_url || file.fileUrl || null
+
+  const getFileDownloadUrl = (file) => {
+    const explicit = file.file_download_url || file.fileDownloadUrl
+    if (explicit) return explicit
+    const viewUrl = getFileViewUrl(file)
+    if (!viewUrl) return null
+    return viewUrl.replace(/\/view(\?|$)/, '/download$1')
   }
 
   const getLanguageFromFile = (filename) => {
@@ -300,19 +311,43 @@ const SessionDetail = ({ onClose, session }) => {
                           className="flex items-center justify-between p-3 glass border border-white/10 rounded-lg"
                         >
                           <div className="flex items-center space-x-3">
-                            {file.fileType?.startsWith('image/') ? (
+                              {(file.fileType || file.file_type)?.startsWith('image/') ? (
                               <Image className="w-5 h-5 text-green-600" />
                             ) : (
                               <FileText className="w-5 h-5 text-red-600" />
                             )}
                             <div>
-                              <p className="font-medium text-white">{file.name}</p>
-                              <p className="text-xs text-gray-500">{file.fileType || 'document'}</p>
+                              {getFileViewUrl(file) ? (
+                                <a
+                                  href={getFileViewUrl(file)}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="font-medium text-white hover:text-primary-400 transition-colors"
+                                  title="Open file in new tab"
+                                >
+                                  {file.name}
+                                </a>
+                              ) : (
+                                <p className="font-medium text-white">{file.name}</p>
+                              )}
+                              <p className="text-xs text-gray-500">{file.fileType || file.file_type || 'document'}</p>
                             </div>
                           </div>
-                          <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors">
-                            <Download className="w-4 h-4" />
-                          </button>
+                          {getFileDownloadUrl(file) ? (
+                            <a
+                              href={getFileDownloadUrl(file)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="p-2 text-gray-400 hover:text-gray-600 transition-colors inline-flex"
+                              title="Download file"
+                            >
+                              <Download className="w-4 h-4" />
+                            </a>
+                          ) : (
+                            <button className="p-2 text-gray-400 transition-colors" disabled>
+                              <Download className="w-4 h-4" />
+                            </button>
+                          )}
                         </div>
                       ))}
                     </div>
