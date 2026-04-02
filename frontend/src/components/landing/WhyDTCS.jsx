@@ -57,8 +57,8 @@ const WhyDTCS = () => {
           <motion.div
             initial={{ opacity: 0, y: 40 }}
             animate={isTableInView ? { opacity: 1, y: 0 } : {}}
-            transition={{ duration: 0.7 }}
-            className="glass-card glass-glow overflow-hidden"
+            transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+            className="glass-card glass-glow overflow-hidden transform-gpu will-change-transform"
           >
             {/* Table Header */}
             <div className="grid grid-cols-3 p-6 border-b border-white/10 bg-white/[0.03]">
@@ -75,9 +75,9 @@ const WhyDTCS = () => {
             {comparisons.map((item, index) => (
               <motion.div
                 key={index}
-                initial={{ opacity: 0, x: -30 }}
-                animate={isTableInView ? { opacity: 1, x: 0 } : {}}
-                transition={{ delay: 0.15 + index * 0.08, duration: 0.5 }}
+                initial={{ opacity: 0, y: 16 }}
+                animate={isTableInView ? { opacity: 1, y: 0 } : {}}
+                transition={{ delay: 0.12 + index * 0.06, duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
                 className={`grid grid-cols-3 p-6 items-center transition-colors duration-300 ${
                   index !== comparisons.length - 1 ? 'border-b border-white/5' : ''
                 }`}
@@ -89,7 +89,7 @@ const WhyDTCS = () => {
                   <motion.div
                     initial={{ scale: 0 }}
                     animate={isTableInView ? { scale: 1 } : {}}
-                    transition={{ delay: 0.3 + index * 0.08, type: "spring", stiffness: 200 }}
+                    transition={{ delay: 0.24 + index * 0.06, duration: 0.3, ease: "easeOut" }}
                   >
                     <div className="w-9 h-9 rounded-full bg-emerald-500/10 flex items-center justify-center border border-emerald-500/25 shadow-lg shadow-emerald-500/10">
                       <CheckCircle2 className="w-5 h-5 text-emerald-400" />
@@ -100,7 +100,7 @@ const WhyDTCS = () => {
                   <motion.div
                     initial={{ scale: 0 }}
                     animate={isTableInView ? { scale: 1 } : {}}
-                    transition={{ delay: 0.3 + index * 0.08, type: "spring", stiffness: 200 }}
+                    transition={{ delay: 0.24 + index * 0.06, duration: 0.3, ease: "easeOut" }}
                   >
                     <div className="w-9 h-9 rounded-full bg-red-500/10 flex items-center justify-center border border-red-500/15">
                       <XCircle className="w-5 h-5 text-red-400/60" />
